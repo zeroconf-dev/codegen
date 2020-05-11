@@ -1,0 +1,20 @@
+type Forum implements Node {
+    id: ID!
+    name: String!
+    category: Category!
+    creator: Person!
+}
+
+type ForumEdge implements Edge {
+    cursor: String!
+    node: Forum
+}
+
+type ForumConnection implements Connection {
+    edges: [ForumEdge!]!
+    pageInfo: PageInfo!
+}
+
+extend type Category {
+    forums(first: Int, after: String): ForumConnection!
+}

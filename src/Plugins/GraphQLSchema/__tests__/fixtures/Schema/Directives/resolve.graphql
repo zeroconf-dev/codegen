@@ -1,0 +1,1 @@
+directive @resolve on FIELD_DEFINITION

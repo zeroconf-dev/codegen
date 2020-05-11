@@ -1,0 +1,36 @@
+{
+	"name": "@zeroconf/codegen",
+	"version": "1.0.0",
+	"main": "index.js",
+	"repository": "https://github.com/zeroconf-dev/codegen",
+	"author": {
+		"email": "github@zeroconf.dev",
+		"name": "ZeroConf OSS",
+		"url": "https://github.com/zeroconf-dev"
+	},
+	"contributors": [
+		{
+			"email": "briankchristensen@gmail.com",
+			"name": "Brian Kejlberg",
+			"url": "https://github.com/thetrompf"
+		}
+	],
+	"license": "BSD-3-Clause",
+	"private": true,
+	"devDependencies": {
+		"@types/jest": "^25.2.1",
+		"@types/node": "^13.13.4",
+		"jest": "^25.5.2",
+		"prettier": "^2.0.5",
+		"ts-jest": "^25.4.0",
+		"ts-node": "^8.10.1",
+		"ts-node-dev": "^1.0.0-pre.44",
+		"typescript": "^3.8.3"
+	},
+	"dependencies": {
+		"cosmiconfig": "^6.0.0",
+		"fast-glob": "^3.2.2",
+		"graphql": "^15.0.0",
+		"tslib": "^1.11.1"
+	}
+}

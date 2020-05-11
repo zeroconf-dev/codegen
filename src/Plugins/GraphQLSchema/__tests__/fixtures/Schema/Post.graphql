@@ -1,0 +1,19 @@
+type Post implements Node {
+    id: ID!
+    content: String!
+    author: Person!
+}
+
+type PostEdge implements Edge {
+    cursor: String!
+    node: Post
+}
+
+type PostConnection implements Connection {
+    edges: [PostEdge!]!
+    pageInfo: PageInfo!
+}
+
+extend type Topic {
+    posts(first: Int, after: String): PostConnection!
+}

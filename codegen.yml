@@ -1,0 +1,18 @@
+---
+generates:
+  generated/Loaders.ts:
+    plugins:
+      @zeroconf/codegen#ExportDirectory:
+        additionalImports:
+        - @zeroconf/codegen/Context#Context
+        - redis#[RedisClient]
+        className: Loaders
+        directory: src/Plugins/ExportDirectory/__tests__/fixtures/Loaders
+        exportTemplate: ${fileName}
+        exportType: SingletonClass
+        importPrefix: @zeroconf/codegen/Loaders
+        importTemplate: ${fileName}Loader
+  generated/Schema.graphql:
+    plugins:
+      @zeroconf/codegen#GraphQLSchema:
+        directory: src/Plugins/GraphQLSchema/__tests__/fixtures/Schema

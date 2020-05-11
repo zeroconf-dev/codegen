@@ -1,0 +1,25 @@
+type PageInfo {
+    endCursor: String
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+}
+
+interface Node {
+    id: ID!
+}
+
+interface Connection {
+    edges: [Edge!]!
+    pageInfo: PageInfo!
+}
+
+interface Edge {
+    cursor: String!
+    node: Node
+}
+
+extend type Query {
+    node(id: ID!): Node
+    nodes(ids: [ID!]!): [Node]!
+}

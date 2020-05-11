@@ -1,0 +1,24 @@
+"""Category containing all forums."""
+type Category implements Node {
+    """ID of forum category."""
+    id: ID!
+    name: String!
+    creator: Person!
+}
+
+"""Connection edge of Category type."""
+type CategoryEdge implements Edge {
+    cursor: String!
+    node: Category
+}
+
+"""Connection of Category type."""
+type CategoryConnection implements Connection {
+    edges: [CategoryEdge!]!
+    pageInfo: PageInfo!
+}
+
+extend type Viewer {
+    """Fetch all categories."""
+    categories(first: Int, after: String): CategoryConnection! @resolve
+}

@@ -1,0 +1,9 @@
+{
+	"licenser.disableAutoHeaderInsertion": true,
+	"licenser.license": "BSD3",
+	"licenser.projectName": "@zeroconf/codegen-ts",
+	"cSpell.words": [
+		"cosmiconfig",
+		"zeroconf"
+	],
+}

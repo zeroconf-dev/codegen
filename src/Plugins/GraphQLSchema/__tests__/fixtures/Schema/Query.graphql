@@ -1,0 +1,2 @@
+"""The root Query type."""
+type Query

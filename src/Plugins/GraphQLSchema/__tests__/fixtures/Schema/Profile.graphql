@@ -1,0 +1,8 @@
+type Profile implements Node & Person {
+    id: ID!
+    name: String!
+}
+
+extend type Viewer {
+    profile: Profile!
+}

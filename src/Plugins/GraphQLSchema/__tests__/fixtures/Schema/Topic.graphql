@@ -1,0 +1,19 @@
+type Topic implements Node {
+    id: ID!
+    subject: String!
+    author: Person!
+}
+
+type TopicEdge implements Edge {
+    cursor: String!
+    node: Topic
+}
+
+type TopicConnection implements Connection {
+    edges: [TopicEdge!]!
+    pageInfo: PageInfo!
+}
+
+extend type Forum {
+    topis: TopicConnection
+}
