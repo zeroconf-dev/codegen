@@ -1,4 +1,5 @@
 import { getModulePath } from '@zeroconf/codegen/Util';
+import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 
 export async function loadPlugin(importModuleStr: string): Promise<CodegenPlugin<any>> {
 	const { importName, importPath } = getModulePath(importModuleStr);

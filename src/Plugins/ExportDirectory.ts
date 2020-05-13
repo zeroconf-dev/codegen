@@ -1,9 +1,8 @@
-import * as fg from 'fast-glob';
 import { basename, extname, dirname, join } from 'path';
 import { createSourceFile, printSourceFile, filterNonNull } from '../Typescript';
 import * as ts from 'typescript';
 import { getModulePath } from '@zeroconf/codegen/Util';
-import { Writable } from 'stream';
+import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 
 enum ExportType {
 	ReExport = 'ReExport',
@@ -11,10 +10,8 @@ enum ExportType {
 }
 
 interface GenerateOptionsBase {
-	directory?: string;
 	exportTemplate?: string;
 	exportType: ExportType;
-	globPattern?: string;
 	headerComment?: string;
 	importPrefix: string;
 	importTemplate?: string;
@@ -70,11 +67,10 @@ interface ImportExportVariable {
 	fileName: string;
 }
 
-const defaultGlobPattern = '*.ts';
 const defaultImportTemplate = '${fileName}';
 
 const plugin: (
-	& CodegenPlugin<GenerateOptions>
+	& CodegenPlugin<GenerateOptions, { export: { filePaths: string[] }}>
 	& {
 		ExportType: typeof ExportType;
 	}
@@ -83,10 +79,10 @@ const plugin: (
 	config: async (config: any): Promise<GenerateOptions> => {
 		return config as GenerateOptions;
 	},
-	generate: async (outputStream: Writable, options: GenerateOptions): Promise<void> => {
+	generate: async (context, options): Promise<void> => {
+		context.logger.info('Plugins/ExportDirectory');
 		const {
 			exportTemplate,
-			globPattern = defaultGlobPattern,
 			importPrefix,
 			importTemplate = defaultImportTemplate,
 		} = options;
@@ -94,10 +90,7 @@ const plugin: (
 
 		const importExportMap: ImportExportMap = {};
 
-		for await (const filePath of fg.stream(globPattern, {
-			cwd: options.directory,
-			globstar: true,
-		})) {
+		for await (const filePath of context.inputStream) {
 			const fileExtension = extname(filePath.toString());
 			const fileName = basename(filePath.toString(), fileExtension);
 			const directoryName = dirname(filePath.toString());
@@ -122,7 +115,7 @@ const plugin: (
 			outputFile,
 			options,
 			importExportMap,
-			outputStream,
+			context.outputStream,
 		);
 	},
 };
@@ -146,7 +139,9 @@ function compileImportPath(filePath: string, importPrefix: string): string {
 }
 
 function compileExportDeclarations(importExportMap: ImportExportMap) {
-	return Object.entries(importExportMap).map(([importPath, { exportName, importName }]) =>
+	return Object.entries(importExportMap)
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([importPath, { exportName, importName }]) =>
 		ts.createExportDeclaration(
 			undefined,
 			undefined,
@@ -254,6 +249,10 @@ function createImportDeclarations(options: GenerateSingletonClassOptions, import
 				: options.additionalImports.map(ai => getModulePath(ai))
 			),
 			...Object.entries(importExportMap)
+				.sort(([a, {exportName: aE}], [b, {exportName: bE}]) => {
+					const res = a.localeCompare(b);
+					return res === 0 ? (aE.localeCompare(bE)) : res;
+				})
 				.map(([importPath, { defaultImport, importName, exportName }]) => ({
 					defaultImport,
 					exportName,
@@ -294,7 +293,9 @@ function addPrivateSingletonProperties(classDecl: ts.ClassDeclaration, importExp
 		classDecl.heritageClauses,
 		[
 			...classDecl.members,
-			...Object.values(importExportMap).reduce((result, { exportName: memberName, importName: memberType }) => {
+			...Object.values(importExportMap)
+				.sort(({exportName: a}, {exportName: b}) => a.localeCompare(b))
+				.reduce((result, { exportName: memberName, importName: memberType }) => {
 				result.push(ts.createProperty(
 					undefined,
 					[ts.createModifier(ts.SyntaxKind.PrivateKeyword)],
@@ -332,7 +333,9 @@ function addPrivateReadonlyConstructorProperty(classDecl: ts.ClassDeclaration, o
 		classDecl.heritageClauses,
 		[
 			...classDecl.members,
-			...constructorParameters.map(param => ts.createProperty(
+			...constructorParameters
+				.sort(({paramName: a}, {paramName: b}) => a.localeCompare(b))
+				.map(param => ts.createProperty(
 				undefined,
 				[
 					ts.createModifier(ts.SyntaxKind.PrivateKeyword),

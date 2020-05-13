@@ -24,6 +24,14 @@ class GenerateSchemaContext {
 	}
 }
 
+export interface GraphQLSchemaCodegenContextExtension {
+	graphql: {
+		schemaContext: GenerateSchemaContext;
+	};
+}
+
+export type { GenerateSchemaContext };
+
 export async function loadSourceFile(sourcePath: PathLike): Promise<DocumentNode> {
 	return parse(new Source(
 		(await readFile(sourcePath)).toString(),

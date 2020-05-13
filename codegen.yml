@@ -1,18 +1,32 @@
 ---
 generates:
   generated/Loaders.ts:
+    config:
+      directory: src/Plugins/ExportDirectory/__tests__/fixtures/Loaders
+      globPattern: '*.ts'
     plugins:
       @zeroconf/codegen#ExportDirectory:
         additionalImports:
-        - @zeroconf/codegen/Context#Context
+        - @zeroconf/codegen/Context#CodegenContext
         - redis#[RedisClient]
         className: Loaders
-        directory: src/Plugins/ExportDirectory/__tests__/fixtures/Loaders
         exportTemplate: ${fileName}
         exportType: SingletonClass
         importPrefix: @zeroconf/codegen/Loaders
         importTemplate: ${fileName}Loader
   generated/Schema.graphql:
+    config:
+      directory: src/Plugins/GraphQLSchema/__tests__/fixtures/Schema
+      globPattern: '**/*.{gql,graphql}'
+    loaders:
+    - @zeroconf/codegen#GraphQLSchema
     plugins:
       @zeroconf/codegen#GraphQLSchema:
-        directory: src/Plugins/GraphQLSchema/__tests__/fixtures/Schema
+  generated/Schema.graphql.ts:
+    config:
+      directory: src/Plugins/GraphQLSchema/__tests__/fixtures/Schema
+      globPattern: '**/*.{gql,graphql}'
+    loaders:
+    - @zeroconf/codegen#GraphQLSchema
+    plugins:
+      @zeroconf/codegen#GraphQLResolver:

@@ -10,15 +10,32 @@ const explorer = cosmiconfig('codegen', {
 	},
 });
 
+export interface OutputConfigReadonly {
+	debug?: boolean;
+	/**
+	 * Defaults to `process.cwd()`
+	 */
+	directory?: string;
+	globPattern?: string;
+}
+
+export interface OutputConfig {
+	debug: boolean;
+	/**
+	 * Defaults to `process.cwd()`
+	 */
+	directory: string;
+	globPattern: string;
+}
+
 export interface Config {
 	config: {
-		debug?: boolean
-	}
+		debug?: boolean;
+	};
 	generates: {
 		[outputPattern: string]: {
-			config: {
-				debug?: boolean
-			};
+			config: OutputConfigReadonly;
+			loaders?: string[];
 			plugins: {
 				[pluginImportPath: string]: {};
 			};
