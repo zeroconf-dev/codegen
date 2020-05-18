@@ -15,5 +15,5 @@ type TopicConnection implements Connection {
 }
 
 extend type Forum {
-    topis: TopicConnection
+    topics(after: String, first: Int): TopicConnection
 }
