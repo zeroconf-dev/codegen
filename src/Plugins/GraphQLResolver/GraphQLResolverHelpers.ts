@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { ModulePath } from '@zeroconf/codegen/Util';
+import { ModulePath, capitalize } from '@zeroconf/codegen/Util';
 import { createImportDeclarationFromModulePath } from '@zeroconf/codegen/Typescript';
 
 export const generateGraphQLResolveInfoImportStatement = () =>
@@ -1296,17 +1296,13 @@ export const generateObjectType = (
 					),
 			  ],
 		[
-			...(Object.prototype.hasOwnProperty.call(interfaceMap, typeName)
-				? []
-				: [
-						ts.createPropertySignature(
-							[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-							ts.createStringLiteral(' $__typename'),
-							undefined,
-							ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
-							undefined,
-						),
-				  ]),
+			ts.createPropertySignature(
+				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.createStringLiteral(' $__typename'),
+				undefined,
+				ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
+				undefined,
+			),
 			...fields.map((field) =>
 				ts.createPropertySignature(
 					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
@@ -1319,3 +1315,63 @@ export const generateObjectType = (
 		],
 	);
 };
+
+export const generateObjectTypeFieldResolvers = (
+	typeName: string,
+	fields: Field[],
+) => [
+	...fields.reduce((carry, field) => [
+		...carry,
+		ts.createTypeAliasDeclaration(
+			undefined,
+			undefined,
+			ts.createIdentifier(capitalize(typeName, field.fieldName, 'Args')),
+			undefined,
+			ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+		),
+		ts.createTypeAliasDeclaration(
+			undefined,
+			undefined,
+			ts.createIdentifier(capitalize(typeName, field.fieldName, 'Resolver')),
+			undefined,
+			ts.createTypeReferenceNode(
+				ts.createIdentifier('ResolverFn'),
+				[
+					resolveType(field),
+					ts.createTypeReferenceNode(
+						ts.createIdentifier(typeName),
+						undefined,
+					),
+					ts.createTypeReferenceNode(
+						ts.createIdentifier('Context'),
+						undefined,
+					),
+					ts.createTypeReferenceNode(
+						ts.createIdentifier(capitalize(typeName, field.fieldName, 'Args')),
+						undefined,
+					),
+				],
+			),
+		),
+	],
+	[] as ts.TypeAliasDeclaration[]),
+	ts.createInterfaceDeclaration(
+		undefined,
+		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.createIdentifier(capitalize(typeName, 'Resolvers')),
+		undefined,
+		undefined,
+		fields.map((field) =>
+			ts.createPropertySignature(
+				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.createIdentifier(field.fieldName),
+				undefined,
+				ts.createTypeReferenceNode(
+					ts.createIdentifier(capitalize(typeName, field.fieldName, 'Resolver')),
+					undefined,
+				),
+				undefined,
+			),
+		),
+	),
+];

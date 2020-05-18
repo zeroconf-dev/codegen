@@ -1,5 +1,5 @@
 import { isMaybeString } from '@zeroconf/codegen/Config';
-import { GraphQLSchemaCodegenContextExtension } from '@zeroconf/codegen/GraphQL';
+import { GraphQLSchemaCodegenContextExtension, SchemaASTVisitor } from '@zeroconf/codegen/GraphQL';
 import {
 	generateContextType,
 	generateExtractResponseTypeLookupUtilityType,
@@ -29,6 +29,7 @@ import {
 	relayTypes,
 	FieldType,
 	Field,
+	generateObjectTypeFieldResolvers,
 } from '@zeroconf/codegen/Plugins/GraphQLResolver/GraphQLResolverHelpers';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import {
@@ -38,7 +39,7 @@ import {
 	addHeaderComment,
 } from '@zeroconf/codegen/Typescript';
 import { getModulePath, assertNever } from '@zeroconf/codegen/Util';
-import { ASTKindToNode, TypeNode, Visitor, FieldDefinitionNode } from 'graphql';
+import { TypeNode, FieldDefinitionNode } from 'graphql';
 import * as ts from 'typescript';
 
 interface GenerateOptions {
@@ -91,10 +92,18 @@ function resolveInterfaceTypeArgs(interfaceName: string, typeName: string): stri
 	}
 }
 
+// class ResolverRegistry {}
+
 const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtension> = {
 	config: async (config) => {
 		if (!isMaybeString(config.headerComment)) {
-			throw new Error(`Expected headerComment to be a string, got: ${typeof config.headerComment}`);
+			throw new Error(`Expected 'headerComment' to be a string, got: ${typeof config.headerComment}`);
+		}
+		if (!isMaybeString(config.context)) {
+			throw new Error(`Expected 'context' to be a string, got: ${typeof config.context}`);
+		}
+		if (!isMaybeString(config.root)) {
+			throw new Error(`Expected 'root' to be a string, got: ${typeof config.root}`);
 		}
 		return config as GenerateOptions;
 	},
@@ -104,21 +113,37 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 		const { headerComment = defaultHeaderComment } = config;
 		let outputFile = createSourceFile('');
 
+		// const registry = new ResolverRegistry();
+
 		const types: {
 			[typeName: string]: Field[];
 		} = {};
 		const interfaceMap: {
 			[typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[];
 		} = {};
+		const resolvers: {
+			[typeName: string]: (Field & { fieldArgs?: {} })[];
+		} = {};
 
 		let currentTypeFields: Field[];
-		const visit: Visitor<ASTKindToNode> = {
+		const visit: SchemaASTVisitor = {
 			Directive: (node) => {
 				context.logger.verbose(`@${node.name.value}`);
 			},
-			FieldDefinition: (node) => {
-				context.logger.verbose(`Field: ${node.name.value}: ${formatType(node.type)}`);
-				currentTypeFields.push(resolveType(node));
+			FieldDefinition: (node, typeInfo) => {
+				const parentType = typeInfo.parentType.name.value;
+				context.logger.verbose(`Field: ${parentType}.${node.name.value}: ${formatType(node.type)}`);
+				if (
+					(node.arguments != null && node.arguments.length > 0) ||
+					(node.directives != null && node.directives.find(d => d.name.value === 'resolve') != null)
+				) {
+					if (resolvers[parentType] == null) {
+						resolvers[parentType] = [];
+					}
+					resolvers[parentType].push(resolveType(node));
+				} else {
+					currentTypeFields.push(resolveType(node));
+				}
 			},
 			InterfaceTypeDefinition: (node) => {
 				context.logger.debug(`Interface: ${node.name.value}`);
@@ -204,6 +229,8 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			...Object.entries(types)
 				.filter(([typeName]) => !relayTypes.includes(typeName))
 				.map(([typeName, fields]) => generateObjectType(typeName, fields, interfaceMap)),
+			...Object.entries(resolvers)
+				.reduce((carry, [typeName, fields]) => [...carry, ...generateObjectTypeFieldResolvers(typeName, fields)], [] as ts.Statement[]),
 		]);
 
 		return printSourceFile(addHeaderComment(outputFile, headerComment), context.outputStream);

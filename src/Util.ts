@@ -25,3 +25,10 @@ export function getModulePath(modulePathStr: string): ModulePath {
 export const assertNever = (_obj: never, msg: string): never => {
 	throw new Error(msg);
 }
+
+export const capitalize = (...parts: string[]): string =>
+	parts.map(part =>
+		part.length === 0
+			? ''
+			: part.charAt(0).toLocaleUpperCase() + part.substring(1),
+	).join('');

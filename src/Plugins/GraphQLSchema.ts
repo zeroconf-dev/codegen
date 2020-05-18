@@ -18,7 +18,7 @@ const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> 
 			documents.push(await loadSourceFile(join(context.outputConfig.directory, filePath.toString())));
 		}
 
-		const schemaContext = createContext(documents);
+		const schemaContext = createContext(documents, context.logger);
 		context.graphql = {
 			schemaContext,
 		};
