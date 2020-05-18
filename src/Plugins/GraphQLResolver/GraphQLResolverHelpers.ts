@@ -27,12 +27,12 @@ export const generateGraphQLResolveInfoImportStatement = () =>
 export const generateRootType = (modulePath?: Maybe<ModulePath>) =>
 	modulePath == null
 		? ts.createTypeAliasDeclaration(
-			undefined,
-			undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-			ts.createIdentifier('Root'),
-			undefined,
-			ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-		)
+				undefined,
+				undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.createIdentifier('Root'),
+				undefined,
+				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+		  )
 		: createImportDeclarationFromModulePath(modulePath);
 
 /**
@@ -48,12 +48,12 @@ export const generateRootType = (modulePath?: Maybe<ModulePath>) =>
 export const generateContextType = (modulePath?: Maybe<ModulePath>) =>
 	modulePath == null
 		? ts.createTypeAliasDeclaration(
-			undefined,
-			undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-			ts.createIdentifier('Context'),
-			undefined,
-			ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-		)
+				undefined,
+				undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.createIdentifier('Context'),
+				undefined,
+				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+		  )
 		: createImportDeclarationFromModulePath(modulePath);
 
 const scalars = {
@@ -798,12 +798,7 @@ export const generateResponseTypeUtilityType = () =>
 		]),
 	);
 
-export const relayTypes = [
-	'Connection',
-	'Edge',
-	'Node',
-	'PageInfo',
-] as readonly string[];
+export const relayTypes = ['Connection', 'Edge', 'Node', 'PageInfo'] as readonly string[];
 
 /**
  * Generate Relay `PageInfo` type interface.
@@ -1232,28 +1227,53 @@ const isScalarType = (typeName: string): typeName is keyof typeof scalars =>
  * @example
  *
  */
-const createListType = (node: ts.TypeNode) => ts.createTypeOperatorNode(ts.SyntaxKind.ReadonlyKeyword, ts.createArrayTypeNode(node));
+const createListType = (node: ts.TypeNode) =>
+	ts.createTypeOperatorNode(ts.SyntaxKind.ReadonlyKeyword, ts.createArrayTypeNode(node));
 
-type Field =
-	| { fieldName: string; listOf?: undefined; nullable: boolean; fieldType: string; typeArgs?: string[] }
-	| { fieldName: string; listOf: Field; nullable: boolean };
+export type FieldType = ListFieldType | NamedFieldType;
+type ListFieldType = { listOf: FieldType; nullable: boolean };
+type NamedFieldType = { listOf?: undefined; fieldType: string; nullable: boolean; typeArgs?: string[] };
 
-const resolveType = (field: Field): ts.TypeNode =>
+export type Field = FieldType & { fieldName: string };
+
+const resolveType = (field: Field | FieldType): ts.TypeNode =>
 	field.listOf == null
 		? createMaybeType(
-			  isScalarType(field.fieldType)
-				  ? createScalarType(field.fieldType)
-				  : createNamedType(field.fieldType, field.typeArgs),
-			  field.nullable,
+				isScalarType(field.fieldType)
+					? createScalarType(field.fieldType)
+					: createNamedType(field.fieldType, field.typeArgs),
+				field.nullable,
 		  )
 		: createMaybeType(createListType(resolveType(field.listOf)), field.nullable);
 
+/**
+ * Generate GraphQL object types.
+ *
+ * @exampe
+ * ```graphql
+ * # GraphQL input type.
+ * type Viewer implements Node {
+ *     id: ID!
+ *     name: String
+ * }
+ * ```
+ * ```typescript
+ * // TS definition output.
+ * export interface Viewer implements Node {
+ *     readonly " $__typename": "Viewer";
+ *     readonly id: Scalars['ID'];
+ *     readonly name: Maybe<Scalars['String']>;
+ * }
+ * ````
+ */
 export const generateObjectType = (
 	typeName: string,
 	fields: Field[],
-	interfaces?: { typeName: string; typeArgs?: string[] }[],
-) =>
-	ts.createInterfaceDeclaration(
+	interfaceMap: { [typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[] },
+) => {
+	const interfaces = interfaceMap[typeName];
+
+	return ts.createInterfaceDeclaration(
 		undefined,
 		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
 		ts.createIdentifier(typeName),
@@ -1261,28 +1281,32 @@ export const generateObjectType = (
 		interfaces == null || interfaces.length === 0
 			? undefined
 			: [
-				  ts.createHeritageClause(
-					  ts.SyntaxKind.ExtendsKeyword,
-					  interfaces.map((iface) =>
-						  ts.createExpressionWithTypeArguments(
-							  iface.typeArgs == null || iface.typeArgs.length === 0
-								  ? undefined
-								  : iface.typeArgs.map((typeArg) =>
-										ts.createTypeReferenceNode(ts.createIdentifier(typeArg), undefined),
-									),
-							  ts.createIdentifier(iface.typeName),
-						  ),
-					  ),
-				  ),
+					ts.createHeritageClause(
+						ts.SyntaxKind.ExtendsKeyword,
+						interfaces.map((iface) =>
+							ts.createExpressionWithTypeArguments(
+								iface.typeArgs == null || iface.typeArgs.length === 0
+									? undefined
+									: iface.typeArgs.map((typeArg) =>
+											ts.createTypeReferenceNode(ts.createIdentifier(typeArg), undefined),
+									  ),
+								ts.createIdentifier(iface.typeName),
+							),
+						),
+					),
 			  ],
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createStringLiteral(' $__typename'),
-				undefined,
-				ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
-				undefined,
-			),
+			...(Object.prototype.hasOwnProperty.call(interfaceMap, typeName)
+				? []
+				: [
+						ts.createPropertySignature(
+							[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+							ts.createStringLiteral(' $__typename'),
+							undefined,
+							ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
+							undefined,
+						),
+				  ]),
 			...fields.map((field) =>
 				ts.createPropertySignature(
 					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
@@ -1294,3 +1318,4 @@ export const generateObjectType = (
 			),
 		],
 	);
+};

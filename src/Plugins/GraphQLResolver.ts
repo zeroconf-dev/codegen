@@ -27,6 +27,8 @@ import {
 	generateScalarsMapInterface,
 	generateUnwrapPromiseUtilityType,
 	relayTypes,
+	FieldType,
+	Field,
 } from '@zeroconf/codegen/Plugins/GraphQLResolver/GraphQLResolverHelpers';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import {
@@ -36,7 +38,7 @@ import {
 	addHeaderComment,
 } from '@zeroconf/codegen/Typescript';
 import { getModulePath, assertNever } from '@zeroconf/codegen/Util';
-import { ASTKindToNode, TypeNode, Visitor } from 'graphql';
+import { ASTKindToNode, TypeNode, Visitor, FieldDefinitionNode } from 'graphql';
 import * as ts from 'typescript';
 
 interface GenerateOptions {
@@ -47,10 +49,45 @@ interface GenerateOptions {
 
 function formatType(type: TypeNode): string {
 	switch (type.kind) {
-		case 'ListType': return `[${formatType(type.type)}]`;
-		case 'NonNullType': return `${formatType(type.type)}!`;
-		case 'NamedType': return type.name.value;
-		default: return assertNever(type, `Unknown type node kind: ${type == null ? null : type!.kind}`);
+		case 'ListType':
+			return `[${formatType(type.type)}]`;
+		case 'NonNullType':
+			return `${formatType(type.type)}!`;
+		case 'NamedType':
+			return type.name.value;
+		default:
+			return assertNever(type, `Unknown type node kind: ${type == null ? null : type!.kind}`);
+	}
+}
+
+function resolveTypeNode(node: TypeNode): FieldType {
+	switch (node.kind) {
+		case 'ListType':
+			return { listOf: resolveTypeNode(node.type), nullable: true };
+		case 'NamedType':
+			return { fieldType: node.name.value, nullable: true };
+		case 'NonNullType':
+			return { ...resolveTypeNode(node.type), nullable: false };
+		default:
+			return assertNever(node, `Unknown type node: ${node ?? node!.kind}`);
+	}
+}
+
+function resolveType(node: FieldDefinitionNode): Field {
+	return {
+		fieldName: node.name.value,
+		...resolveTypeNode(node.type),
+	};
+}
+
+function resolveInterfaceTypeArgs(interfaceName: string, typeName: string): string[] | undefined {
+	switch (true) {
+		case interfaceName.endsWith('Edge'):
+			return [typeName.substr(0, typeName.length - 'Edge'.length)];
+		case interfaceName.endsWith('Connection'):
+			return [typeName.substr(0, typeName.length - 'Connection'.length)];
+		default:
+			return undefined;
 	}
 }
 
@@ -68,17 +105,20 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 		let outputFile = createSourceFile('');
 
 		const types: {
-			[typeName: string]: { fieldName: string; fieldType: string }[];
-		} = {}
+			[typeName: string]: Field[];
+		} = {};
+		const interfaceMap: {
+			[typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[];
+		} = {};
 
-		let currentTypeFields: { fieldName: string; fieldType: string }[];
+		let currentTypeFields: Field[];
 		const visit: Visitor<ASTKindToNode> = {
 			Directive: (node) => {
 				context.logger.verbose(`@${node.name.value}`);
 			},
 			FieldDefinition: (node) => {
 				context.logger.verbose(`Field: ${node.name.value}: ${formatType(node.type)}`);
-				currentTypeFields.push({ fieldName: node.name.value, fieldType: formatType(node.type) });
+				currentTypeFields.push(resolveType(node));
 			},
 			InterfaceTypeDefinition: (node) => {
 				context.logger.debug(`Interface: ${node.name.value}`);
@@ -97,11 +137,24 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 				}
 			},
 			ObjectTypeDefinition: (node) => {
-				context.logger.debug(`Type: ${node.name.value}`);
-				if (types[node.name.value] == null) {
-					currentTypeFields = types[node.name.value] = [];
+				const typeName = node.name.value;
+				context.logger.debug(`Type: ${typeName}`);
+				if (types[typeName] == null) {
+					currentTypeFields = types[typeName] = [];
 				} else {
-					currentTypeFields = types[node.name.value];
+					currentTypeFields = types[typeName];
+				}
+				if (node.interfaces != null) {
+					const currentInterfaceMap = interfaceMap[typeName];
+					const additionalInterfaceMap = (interfaceMap[typeName] = node.interfaces.map((iface) => ({
+						typeName: iface.name.value,
+						typeArgs: resolveInterfaceTypeArgs(iface.name.value, typeName),
+					})));
+					if (currentInterfaceMap == null) {
+						interfaceMap[typeName] = additionalInterfaceMap;
+					} else {
+						interfaceMap[typeName] = [...currentInterfaceMap, ...additionalInterfaceMap];
+					}
 				}
 			},
 			ObjectTypeExtension: (node) => {
@@ -111,7 +164,7 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 				} else {
 					currentTypeFields = types[node.name.value];
 				}
-			}
+			},
 		};
 
 		context.graphql.schemaContext.visitSchema(visit);
@@ -150,32 +203,10 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			// Generate types from schema.
 			...Object.entries(types)
 				.filter(([typeName]) => !relayTypes.includes(typeName))
-				.map(
-					([typeName, fields]) => generateObjectType(typeName, fields.map((field) => {
-						const nullable = !field.fieldType.endsWith('!');
-						const isList = field.fieldType.startsWith('[');
-						const fieldType = isList ? field.fieldType.match(/(\w+)/g)?.[0] ?? '' : field.fieldType;
-
-						return isList ? {
-							fieldName: field.fieldName,
-							listOf: {
-								fieldName: field.fieldName,
-								fieldType: fieldType.replace(/!/g, ''),
-								nullable: !fieldType.endsWith('!'),
-							},
-							nullable: nullable,
-						} : {
-							fieldName: field.fieldName,
-							fieldType: field.fieldType.replace(/[\[\]!]/g, ''),
-							nullable: nullable,
-						};
-					}), undefined)),
+				.map(([typeName, fields]) => generateObjectType(typeName, fields, interfaceMap)),
 		]);
 
-		return printSourceFile(
-			addHeaderComment(outputFile, headerComment),
-			context.outputStream,
-		);
+		return printSourceFile(addHeaderComment(outputFile, headerComment), context.outputStream);
 	},
 };
 
