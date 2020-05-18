@@ -2,6 +2,7 @@ import { ExportType, generate } from '@zeroconf/codegen/Plugins/ExportDirectory'
 import { join } from 'path';
 import { PassThrough } from 'stream';
 import { createGenerateContext } from '@zeroconf/codegen/Runner';
+import { Level } from 'ansi-logger';
 
 function createOutputStream(): [PassThrough, Buffer[]] {
 	const chunks: Buffer[] = [];
@@ -20,6 +21,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'non-existing'),
 					globPattern: '*.ts',
@@ -52,6 +54,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'non-existing'),
 					globPattern: '*.ts',
@@ -81,6 +84,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'non-existing'),
 					globPattern: '*.ts',
@@ -119,6 +123,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'non-existing'),
 					globPattern: '*.ts',
@@ -149,6 +154,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '*.ts',
@@ -210,6 +216,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '**/*.ts',
@@ -319,6 +326,7 @@ describe('SingletonClass', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '*.ts',
@@ -381,6 +389,7 @@ BUT YOU STILL SHOULDN'T EDIT THIS FILE.`,
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '*.ts',
@@ -442,6 +451,7 @@ BUT YOU STILL SHOULDN'T EDIT THIS FILE.`,
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '*.ts',
@@ -502,6 +512,7 @@ BUT YOU STILL SHOULDN'T EDIT THIS FILE.`,
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'nowhere'),
 					globPattern: '*.ts',
@@ -531,6 +542,7 @@ BUT YOU STILL SHOULDN'T EDIT THIS FILE.`,
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '*.ts',
@@ -596,6 +608,7 @@ describe('ReExport', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'Loaders'),
 					globPattern: '*.ts',
@@ -626,6 +639,7 @@ describe('ReExport', () => {
 		const [outputStream, chunks] = createOutputStream();
 		const context = await createGenerateContext(
 			{
+				logLevel: Level.SILENT,
 				outputConfig: {
 					directory: join(__dirname, 'fixtures', 'nowhere'),
 					globPattern: '*.ts',

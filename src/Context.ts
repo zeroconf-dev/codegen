@@ -1,9 +1,10 @@
 import { OutputConfig } from '@zeroconf/codegen/Config';
-import { AnsiLogger, createLoggerFromEnvironment } from 'ansi-logger';
+import { AnsiLogger, createLoggerFromEnvironment, Level } from 'ansi-logger';
 import { yellow } from 'cli-color';
 
 interface CodegenContextOptions {
 	inputStream: NodeJS.ReadableStream;
+	logLevel?: Level,
 	outputConfig: OutputConfig;
 	outputStream: NodeJS.WritableStream;
 }
@@ -19,6 +20,7 @@ export class CodegenContext {
 			group: 'codegen',
 			groupColor: yellow,
 			logFormat: 'TEXT',
+			logLevel: options.logLevel,
 		})
 		this.inputStream = options.inputStream;
 		this.outputConfig = options.outputConfig;

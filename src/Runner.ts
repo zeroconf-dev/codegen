@@ -5,6 +5,7 @@ import { loadPlugin } from '@zeroconf/codegen/Plugin';
 import * as fg from 'fast-glob';
 import { loadLoader } from '@zeroconf/codegen/Loader';
 import { CodegenContext } from '@zeroconf/codegen/Context';
+import { Level } from 'ansi-logger';
 
 export function run({ generates, config: globalConfig }: Config) {
 	return Object.entries(generates).reduce(async (previousOutput, [outputPath, { plugins , config: outputConfig, loaders }]) => {
@@ -35,9 +36,10 @@ export function run({ generates, config: globalConfig }: Config) {
 }
 
 export async function createGenerateContext(
-	{ outputPath, outputStream, outputConfig, loaders }: {
+	{ outputPath, outputStream, outputConfig, loaders, logLevel }: {
 		loaders?: string[]
 		outputConfig: OutputConfigReadonly,
+		logLevel?: Level
 	} & (
 		| { outputPath: string, outputStream?: undefined }
 		| { outputPath?: undefined, outputStream: NodeJS.WritableStream }
@@ -67,6 +69,7 @@ export async function createGenerateContext(
 	const context = new CodegenContext({
 		outputConfig: outputConfigMerged as OutputConfig,
 		inputStream: inputStream,
+		logLevel: logLevel,
 		outputStream: resolvedOutputStream,
 	});
 

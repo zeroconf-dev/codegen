@@ -1,5 +1,6 @@
 export interface ModulePath {
 	defaultImport: boolean;
+	exportName?: Maybe<string>;
 	importName: string;
 	importPath: string;
 }
@@ -19,4 +20,8 @@ export function getModulePath(modulePathStr: string): ModulePath {
 		importName: importName ?? 'default',
 		importPath: importPath,
 	};
+}
+
+export const assertNever = (_obj: never, msg: string): never => {
+	throw new Error(msg);
 }

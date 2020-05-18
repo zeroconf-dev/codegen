@@ -16,5 +16,5 @@ type ForumConnection implements Connection {
 }
 
 extend type Category {
-    forums(first: Int, after: String): ForumConnection!
+    forums(first: Int, after: String): ForumConnection! @resolve
 }
