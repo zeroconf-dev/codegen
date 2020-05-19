@@ -39,7 +39,7 @@ import {
 	addHeaderComment,
 } from '@zeroconf/codegen/Typescript';
 import { getModulePath, assertNever } from '@zeroconf/codegen/Util';
-import { TypeNode, FieldDefinitionNode } from 'graphql';
+import { TypeNode, FieldDefinitionNode, InputValueDefinitionNode, TypeInfo } from 'graphql';
 import * as ts from 'typescript';
 
 interface GenerateOptions {
@@ -74,7 +74,7 @@ function resolveTypeNode(node: TypeNode): FieldType {
 	}
 }
 
-function resolveType(node: FieldDefinitionNode): Field {
+function resolveType(node: FieldDefinitionNode | InputValueDefinitionNode): Field {
 	return {
 		fieldName: node.name.value,
 		...resolveTypeNode(node.type),
@@ -108,12 +108,13 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 		return config as GenerateOptions;
 	},
 	generate: async (context, config) => {
-		context.logger.info('Plugins/GraphQLResolver');
+		const { logger } = context;
+		logger.info('Plugins/GraphQLResolver');
 
 		const { headerComment = defaultHeaderComment } = config;
-		let outputFile = createSourceFile('');
+		const { schemaContext } = context.graphql;
 
-		// const registry = new ResolverRegistry();
+		let outputFile = createSourceFile('');
 
 		const types: {
 			[typeName: string]: Field[];
@@ -122,31 +123,38 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			[typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[];
 		} = {};
 		const resolvers: {
-			[typeName: string]: (Field & { fieldArgs?: {} })[];
+			[typeName: string]: (Field & { fieldArgs?: Field[] })[];
 		} = {};
 
 		let currentTypeFields: Field[];
 		const visit: SchemaASTVisitor = {
-			Directive: (node) => {
-				context.logger.verbose(`@${node.name.value}`);
+			Directive: (node, typeInfo) => {
+				// const parentType = typeInfo.parentType.name.value;
+				// logger.verbose(`@${node.name.value} on Type: ${parentType}`);
 			},
 			FieldDefinition: (node, typeInfo) => {
 				const parentType = typeInfo.parentType.name.value;
-				context.logger.verbose(`Field: ${parentType}.${node.name.value}: ${formatType(node.type)}`);
 				if (
 					(node.arguments != null && node.arguments.length > 0) ||
 					(node.directives != null && node.directives.find(d => d.name.value === 'resolve') != null)
-				) {
+					) {
+					// logger.debug(`Field: ${parentType}.${node.name.value}: ${formatType(node.type)}`);
 					if (resolvers[parentType] == null) {
 						resolvers[parentType] = [];
 					}
-					resolvers[parentType].push(resolveType(node));
+					// logger.verbose(node.arguments);
+					resolvers[parentType].push({
+						...resolveType(node),
+						fieldArgs: (node.arguments ?? []).map(argDef => ({
+							...resolveType(argDef),
+						})),
+					});
 				} else {
 					currentTypeFields.push(resolveType(node));
 				}
 			},
 			InterfaceTypeDefinition: (node) => {
-				context.logger.debug(`Interface: ${node.name.value}`);
+				// logger.debug(`Interface: ${node.name.value}`);
 				if (types[node.name.value] == null) {
 					currentTypeFields = types[node.name.value] = [];
 				} else {
@@ -154,7 +162,7 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 				}
 			},
 			InterfaceTypeExtension: (node) => {
-				context.logger.debug(`Interface extension: ${node.name.value}`);
+				// logger.debug(`Interface extension: ${node.name.value}`);
 				if (types[node.name.value] == null) {
 					currentTypeFields = types[node.name.value] = [];
 				} else {
@@ -163,7 +171,7 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			},
 			ObjectTypeDefinition: (node) => {
 				const typeName = node.name.value;
-				context.logger.debug(`Type: ${typeName}`);
+				// logger.debug(`Type: ${typeName}`);
 				if (types[typeName] == null) {
 					currentTypeFields = types[typeName] = [];
 				} else {
@@ -183,7 +191,7 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 				}
 			},
 			ObjectTypeExtension: (node) => {
-				context.logger.debug(`Type extension: ${node.name.value}`);
+				// logger.debug(`Type extension: ${node.name.value}`);
 				if (types[node.name.value] == null) {
 					currentTypeFields = types[node.name.value] = [];
 				} else {
@@ -192,7 +200,7 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			},
 		};
 
-		context.graphql.schemaContext.visitSchema(visit);
+		schemaContext.visitSchema(visit);
 
 		outputFile = ts.updateSourceFileNode(outputFile, [
 			...outputFile.statements,
@@ -225,10 +233,12 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			generateRelayConnectionArgsUtilityType(),
 			generateRelayConnectionInterface(),
 
-			// Generate types from schema.
+			// Generate resolver output types from schema.
 			...Object.entries(types)
 				.filter(([typeName]) => !relayTypes.includes(typeName))
-				.map(([typeName, fields]) => generateObjectType(typeName, fields, interfaceMap)),
+				.map(([typeName, fields]) => generateObjectType(schemaContext, typeName, fields, interfaceMap)),
+
+			// Generate resolvers from schema.
 			...Object.entries(resolvers)
 				.reduce((carry, [typeName, fields]) => [...carry, ...generateObjectTypeFieldResolvers(typeName, fields)], [] as ts.Statement[]),
 		]);

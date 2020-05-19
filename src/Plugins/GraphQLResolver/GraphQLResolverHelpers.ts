@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { ModulePath, capitalize } from '@zeroconf/codegen/Util';
 import { createImportDeclarationFromModulePath } from '@zeroconf/codegen/Typescript';
+import { GenerateSchemaContext } from '@zeroconf/codegen/GraphQL';
 
 export const generateGraphQLResolveInfoImportStatement = () =>
 	ts.createImportDeclaration(
@@ -1225,7 +1226,7 @@ const isScalarType = (typeName: string): typeName is keyof typeof scalars =>
  * Create a list type node.
  *
  * @example
- *
+ * readonly T[]
  */
 const createListType = (node: ts.TypeNode) =>
 	ts.createTypeOperatorNode(ts.SyntaxKind.ReadonlyKeyword, ts.createArrayTypeNode(node));
@@ -1236,7 +1237,38 @@ type NamedFieldType = { listOf?: undefined; fieldType: string; nullable: boolean
 
 export type Field = FieldType & { fieldName: string };
 
-const resolveType = (field: Field | FieldType): ts.TypeNode =>
+/**
+ * Resolve Optional/List/Scalar/NamedType, and create corresponding typescript resolution.
+ *
+ * @example
+ * createTypeFromField({ fieldName: 'id', fieldType: 'ID', nullable: false })
+ * interface Viewer {
+ *     // Output
+ *     id: Scalars['ID']
+ * }
+ *
+ * @example
+ * createTypeFromField({ fieldName: 'address', fieldType: 'String', nullable: true })
+ * interface Profile {
+ *     // Output
+ *     address: Maybe<Scalars['String']>;
+ * }
+ *
+ * @example
+ * createTypeFromField({ fieldName: 'profile', fieldType: 'Profile', nullable: true })
+ * interface Viewer {
+ *     // Output
+ *     profile: Maybe<Profile>;
+ * }
+ *
+ * @example
+ * createTypeFromField({ fieldName: 'friends', listOf: { fieldType: 'Profile', nullable: true }, nullable: true })
+ * interface Profile {
+ *     // Output
+ *     friends: Maybe<readonly Maybe<Profile>[]>;
+ * }
+ */
+const createTypeFromField = (field: Field | FieldType): ts.TypeNode =>
 	field.listOf == null
 		? createMaybeType(
 				isScalarType(field.fieldType)
@@ -1244,12 +1276,12 @@ const resolveType = (field: Field | FieldType): ts.TypeNode =>
 					: createNamedType(field.fieldType, field.typeArgs),
 				field.nullable,
 		  )
-		: createMaybeType(createListType(resolveType(field.listOf)), field.nullable);
+		: createMaybeType(createListType(createTypeFromField(field.listOf)), field.nullable);
 
 /**
  * Generate GraphQL object types.
  *
- * @exampe
+ * @example
  * ```graphql
  * # GraphQL input type.
  * type Viewer implements Node {
@@ -1267,6 +1299,7 @@ const resolveType = (field: Field | FieldType): ts.TypeNode =>
  * ````
  */
 export const generateObjectType = (
+	context: GenerateSchemaContext,
 	typeName: string,
 	fields: Field[],
 	interfaceMap: { [typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[] },
@@ -1296,19 +1329,21 @@ export const generateObjectType = (
 					),
 			  ],
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createStringLiteral(' $__typename'),
-				undefined,
-				ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
-				undefined,
-			),
+			...context.typeInfo.isInterfaceType(typeName) ? [] : [
+				ts.createPropertySignature(
+					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+					ts.createStringLiteral(' $__typename'),
+					undefined,
+					ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
+					undefined,
+				)
+			],
 			...fields.map((field) =>
 				ts.createPropertySignature(
 					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
 					ts.createIdentifier(field.fieldName),
 					undefined,
-					resolveType(field),
+					createTypeFromField(field),
 					undefined,
 				),
 			),
@@ -1337,7 +1372,7 @@ export const generateObjectTypeFieldResolvers = (
 			ts.createTypeReferenceNode(
 				ts.createIdentifier('ResolverFn'),
 				[
-					resolveType(field),
+					createTypeFromField(field),
 					ts.createTypeReferenceNode(
 						ts.createIdentifier(typeName),
 						undefined,

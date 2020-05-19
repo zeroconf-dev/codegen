@@ -4,7 +4,6 @@ import {
 	ASTNode,
 	buildASTSchema,
 	concatAST,
-	DefinitionNode,
 	DirectiveDefinitionNode,
 	DirectiveNode,
 	DocumentNode,
@@ -187,7 +186,10 @@ type InputValueParentDefinitionNode =
 	| InputObjectTypeExtensionNode
 	;
 
-interface SchemaASTParent {
+/**
+ * Given a valid AST, this map resolves valid parent nodes from any Schema AST Node.
+ */
+interface SchemaASTParentNode {
 	Directive: DirectiveParentDefinitionNode;
 	DirectiveDefinition: null;
 	Document: null;
@@ -214,34 +216,98 @@ interface SchemaASTParent {
 	UnionTypeExtension: null;
 }
 
+/**
+ * Given a valid AST, this map resolves valid parent type definition nodes from any Schema AST Node.
+ * Note, not all Schema AST Nodes lives as descendant to a type definition node.
+ */
+interface SchemaASTParentTypeNode {
+	Directive: ParentTypeDefinitionNodes;
+	DirectiveDefinition: null;
+	Document: null;
+	EnumTypeDefinition: null;
+	EnumTypeExtension: null;
+	EnumValueDefinition: EnumValueParentDefinitionNode;
+	FieldDefinition: FieldParentDefinitionNode;
+	InputObjectTypeDefinition: null;
+	InputObjectTypeExtension: null;
+	InputValueDefinition: null;
+	InterfaceTypeDefinition: null;
+	InterfaceTypeExtension: null;
+	ListType: ParentTypeDefinitionNodes;
+	Name: EnumTypeDefinitionNodes | ParentTypeDefinitionNodes | UnionTypeDefinitionNodes;
+	NamedType: ParentTypeDefinitionNodes | UnionTypeDefinitionNodes;
+	NonNullType: ParentTypeDefinitionNodes;
+	ObjectTypeDefinition: null;
+	ObjectTypeExtension: null;
+	ScalarTypeDefinition: null;
+	ScalarTypeExtension: null;
+	SchemaDefinition: null;
+	SchemaExtension: null;
+	UnionTypeDefinition: null;
+	UnionTypeExtension: null;
+}
+
+/**
+ * Resolve the node at a single level higher up in the AST
+ * given a valid tree.
+ */
 type SchemaParentNode<TSchemaASTNode extends SchemaASTNode> =
-	TSchemaASTNode['kind'] extends keyof SchemaASTParent
-		? SchemaASTParent[TSchemaASTNode['kind']]
-		: Maybe<SchemaASTNode>;
+	TSchemaASTNode['kind'] extends keyof SchemaASTParentNode
+		? SchemaASTParentNode[TSchemaASTNode['kind']]
+	: Maybe<SchemaASTNode>;
+
+type SchemaParentType<TSchemaASTNode extends SchemaASTNode> =
+	TSchemaASTNode['kind'] extends keyof SchemaASTParentTypeNode
+		? SchemaASTParentTypeNode[TSchemaASTNode['kind']]
+		: Maybe<SchemaASTNode>
+
+type EnumTypeDefinitionNodes =
+	| EnumTypeDefinitionNode
+	| EnumTypeExtensionNode
+	;
+
+type InterfaceTypeDefinitionNodes =
+	| InterfaceTypeDefinitionNode
+	| InterfaceTypeExtensionNode
+	;
+
+type InputObjectTypeDefinitionNodes =
+	| InputObjectTypeDefinitionNode
+	| InputObjectTypeExtensionNode
+	;
+
+type ObjectTypeDefinitionNodes =
+	| ObjectTypeDefinitionNode
+	| ObjectTypeExtensionNode
+	;
+
+type UnionTypeDefinitionNodes =
+	| UnionTypeDefinitionNode
+	| UnionTypeExtensionNode
+	;
+
+type ParentTypeDefinitionNodes =
+	| InterfaceTypeDefinitionNodes
+	| InputObjectTypeDefinitionNodes
+	| ObjectTypeDefinitionNodes
+	;
 
 class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	public readonly schema: GraphQLSchema;
 	public readonly document: DocumentNode;
 	public readonly logger: AnsiLogger<any>;
-	private readonly enumDefinitionMap: Map<string, (EnumTypeDefinitionNode | EnumTypeExtensionNode)[]> = new Map();
+
+	private readonly enumDefinitionMap: Map<string, EnumTypeDefinitionNodes[]> = new Map();
+	private readonly enumValueMap: Map<string, EnumValueDefinitionNode[]> = new Map();
 	private readonly fieldDefinitionMap: Map<string, FieldDefinitionNode> = new Map();
-	private readonly interfaceDefinitionMap: Map<
-		string,
-		(InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode)[]
-	> = new Map();
-	private readonly objectDefinitionMap: Map<
-		string,
-		(ObjectTypeDefinitionNode | ObjectTypeExtensionNode)[]
-	> = new Map();
+	private readonly fieldFromParentDefinitionMap: Map<string, Map<string, FieldDefinitionNode>> = new Map();
+	private readonly inputObjectDefinitionMap: Map<string, InputObjectTypeDefinitionNodes[]> = new Map();
+	private readonly interfaceDefinitionMap: Map<string, InterfaceTypeDefinitionNodes[]> = new Map();
+	private readonly objectDefinitionMap: Map<string, ObjectTypeDefinitionNodes[]> = new Map();
+	private readonly unionDefinitionMap: Map<string, UnionTypeDefinitionNodes[]> = new Map();
+
 	private readonly parentNodeStack: SchemaASTNode[] = [];
-	private parentTypeDefinition: Maybe<
-		| InputObjectTypeDefinitionNode
-		| InputObjectTypeExtensionNode
-		| InterfaceTypeDefinitionNode
-		| InterfaceTypeExtensionNode
-		| ObjectTypeDefinitionNode
-		| ObjectTypeExtensionNode
-	> = null;
+	private parentTypeDefinition: Maybe<ParentTypeDefinitionNodes> = null;
 
 	public constructor(document: DocumentNode, schema: GraphQLSchema, logger: AnsiLogger<any>) {
 		this.document = document;
@@ -253,18 +319,19 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 		return this.fieldDefinitionMap;
 	}
 
-	public get enumDefinitions(): ReadonlyMap<string, (EnumTypeDefinitionNode | EnumTypeExtensionNode)[]> {
+	public get enumDefinitions(): ReadonlyMap<string, EnumTypeDefinitionNodes[]> {
 		return this.enumDefinitionMap;
 	}
 
-	public get interfaceDefinitions(): ReadonlyMap<
-		string,
-		(InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode)[]
-	> {
+	public get interfaceDefinitions(): ReadonlyMap<string, InterfaceTypeDefinitionNodes[]> {
 		return this.interfaceDefinitionMap;
 	}
 
-	public get objectDefinitions(): ReadonlyMap<string, (ObjectTypeDefinitionNode | ObjectTypeExtensionNode)[]> {
+	public get inputObjectDefinitions(): ReadonlyMap<string, InputObjectTypeDefinitionNodes[]> {
+		return this.inputObjectDefinitionMap;
+	}
+
+	public get objectDefinitions(): ReadonlyMap<string, ObjectTypeDefinitionNodes[]> {
 		return this.objectDefinitionMap;
 	}
 
@@ -273,9 +340,67 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	}
 
 	public get parentType() {
-		return this.parentTypeDefinition as TSchemaASTNode extends FieldDefinitionNode
-			? FieldParentDefinitionNode
-			: Maybe<FieldParentDefinitionNode>;
+		return this.parentTypeDefinition as SchemaParentType<TSchemaASTNode>;
+	}
+
+	public getFieldDefinitionMap(parentTypeName: string): ReadonlyMap<string, FieldDefinitionNode> {
+		const fieldDefinitionMap = this.fieldFromParentDefinitionMap.get(parentTypeName);
+		if (fieldDefinitionMap == null) {
+			throw new Error(`No field map found for parentType: ${parentTypeName}`);
+		}
+		return fieldDefinitionMap;
+	}
+
+	public getEnumValues(enumTypeName: string): readonly EnumValueDefinitionNode[] {
+		const enumValues = this.enumValueMap.get(enumTypeName);
+		if (enumValues == null) {
+			throw new Error(`No enum values found for enumType: ${enumTypeName}`);
+		}
+		return enumValues;
+	}
+
+	public isQueryType(typeName: string): boolean {
+		const queryType = this.schema.getQueryType();
+		return (
+			(queryType == null && typeName === 'Query') ||
+			(queryType != null && queryType.name === typeName)
+		);
+	}
+
+	public isMutationType(typeName: string): boolean {
+		const mutationType = this.schema.getMutationType();
+		return (
+			(mutationType == null && typeName === 'Mutation') ||
+			(mutationType != null && mutationType.name === typeName)
+		);
+	}
+
+	public isSubscriptionType(typeName: string): boolean {
+		const subscriptionType = this.schema.getSubscriptionType();
+		return (
+			(subscriptionType == null && typeName === 'Subscription') ||
+			(subscriptionType != null && subscriptionType.name === typeName)
+		);
+	}
+
+	public isEnumType(typeName: string): boolean {
+		return this.enumDefinitionMap.has(typeName);
+	}
+
+	public isInterfaceType(typeName: string): boolean {
+		return this.interfaceDefinitionMap.has(typeName);
+	}
+
+	public isInputObjectType(typeName: string): boolean {
+		return this.inputObjectDefinitionMap.has(typeName);
+	}
+
+	public isObjectType(typeName: string): boolean {
+		return this.objectDefinitionMap.has(typeName);
+	}
+
+	public isUnionType(typeName: string): boolean {
+		return this.unionDefinitionMap.has(typeName);
 	}
 
 	private getParentNode<TASTNode extends SchemaASTNode>(): SchemaParentNode<TASTNode> {
@@ -294,41 +419,104 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 				this.enumDefinitionMap.set(enumName, enumDefinitions);
 				break;
 			}
+
+			case Kind.ENUM_VALUE_DEFINITION: {
+				const enumValueName = node.name.value;
+
+				const enumType = this.getParentNode<EnumValueDefinitionNode>();
+				if (enumType == null) {
+					throw new TypeError(`Invalid type, enum value definition: ${enumValueName}, with parent`);
+				}
+
+				const enumTypeName = enumType.name.value;
+				const qualifiedEnumValueName = `${enumTypeName}.${enumValueName}`;
+
+				const enumValues = this.enumValueMap.get(enumTypeName);
+				if (enumValues == null) {
+					throw new TypeError(`Invalid type, enum type ${enumTypeName} not found in values map, for enum value definition: ${qualifiedEnumValueName}`);
+				}
+				enumValues.push(node);
+				break;
+			}
+
 			case Kind.FIELD_DEFINITION: {
 				const fieldName = node.name.value;
+
 				const parent = this.getParentNode<FieldDefinitionNode>();
 				if (parent == null) {
 					throw new TypeError(`Invalid type, field definition: ${fieldName}, without parent`);
 				}
 				const parentTypeName = parent.name.value;
 				const qualifiedFieldName = `${parentTypeName}.${fieldName}`;
-				if (this.fieldDefinitionMap.has(qualifiedFieldName)) {
+
+				const fieldFromParentDefinitions = this.fieldFromParentDefinitionMap.get(parentTypeName);
+				if (fieldFromParentDefinitions == null) {
+					throw new TypeError(`Invalid type, field definition: ${qualifiedFieldName}, without field from parent map.`);
+				}
+
+				if (this.fieldDefinitionMap.has(qualifiedFieldName) || fieldFromParentDefinitions.has(fieldName)) {
 					throw new TypeError(`Invalid type, duplicate field definition: ${qualifiedFieldName}`);
 				}
+
+				fieldFromParentDefinitions.set(fieldName, node);
 				this.fieldDefinitionMap.set(qualifiedFieldName, node);
+
 				break;
 			}
+
 			case Kind.INPUT_OBJECT_TYPE_DEFINITION:
 			case Kind.INPUT_OBJECT_TYPE_EXTENSION: {
+				const typeName = node.name.value;
+
+				const inputObjectDefinitions = this.inputObjectDefinitionMap.get(typeName) ?? [];
+				inputObjectDefinitions.push(node);
+				this.inputObjectDefinitionMap.set(typeName, inputObjectDefinitions);
+
+				this.fieldFromParentDefinitionMap.set(typeName, this.fieldFromParentDefinitionMap.get(typeName) ?? new Map());
+
 				this.parentTypeDefinition = node;
 				break;
 			}
+
 			case Kind.INTERFACE_TYPE_DEFINITION:
 			case Kind.INTERFACE_TYPE_EXTENSION: {
 				const typeName = node.name.value;
+
 				const interfaceDefinitions = this.interfaceDefinitionMap.get(typeName) ?? [];
 				interfaceDefinitions.push(node);
 				this.interfaceDefinitionMap.set(typeName, interfaceDefinitions);
+
+				this.fieldFromParentDefinitionMap.set(typeName, this.fieldFromParentDefinitionMap.get(typeName) ?? new Map());
+
 				this.parentTypeDefinition = node;
 				break;
 			}
+
 			case Kind.OBJECT_TYPE_DEFINITION:
 			case Kind.OBJECT_TYPE_EXTENSION: {
 				const typeName = node.name.value;
+
 				const objectDefinitions = this.objectDefinitionMap.get(typeName) ?? [];
 				objectDefinitions.push(node);
 				this.objectDefinitionMap.set(typeName, objectDefinitions);
+
+				this.fieldFromParentDefinitionMap.set(typeName, this.fieldFromParentDefinitionMap.get(typeName) ?? new Map());
+
 				this.parentTypeDefinition = node;
+				break;
+			}
+
+			case Kind.UNION_TYPE_DEFINITION:
+			case Kind.UNION_TYPE_EXTENSION: {
+				const typeName = node.name.value;
+
+				const unionDefinitions = this.unionDefinitionMap.get(typeName) ?? [];
+				unionDefinitions.push(node);
+				this.unionDefinitionMap.set(typeName, unionDefinitions);
+
+				// Unions does not act as parent types for object / interface definition nodes
+				// only for NamedType nodes, so we don't set et as parent type definition node.
+				// this.parentTypeDefinition = node;
 				break;
 			}
 		}
