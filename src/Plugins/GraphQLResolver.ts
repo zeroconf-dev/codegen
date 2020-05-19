@@ -1,12 +1,11 @@
 import { isMaybeString } from '@zeroconf/codegen/Config';
-import { GraphQLSchemaCodegenContextExtension, SchemaASTVisitor } from '@zeroconf/codegen/GraphQL';
+import { GraphQLSchemaCodegenContextExtension } from '@zeroconf/codegen/GraphQL';
 import {
 	generateContextType,
 	generateExtractResponseTypeLookupUtilityType,
 	generateExtractResponseTypeUtilityType,
 	generateGraphQLResolveInfoImportStatement,
 	generateMaybeUtilityType,
-	generateObjectType,
 	generatePreserveMaybeUtilityType,
 	generateRelayBackwardConnectionArgsType,
 	generateRelayConnectionArgsMapInterface,
@@ -26,10 +25,9 @@ import {
 	generateRootType,
 	generateScalarsMapInterface,
 	generateUnwrapPromiseUtilityType,
-	relayTypes,
-	FieldType,
-	Field,
-	generateObjectTypeFieldResolvers,
+	generateInterfaceOutputTypes,
+	generateObjectOutputTypes,
+	generateObjectTypeResolvers,
 } from '@zeroconf/codegen/Plugins/GraphQLResolver/GraphQLResolverHelpers';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import {
@@ -38,34 +36,13 @@ import {
 	defaultHeaderComment,
 	addHeaderComment,
 } from '@zeroconf/codegen/Typescript';
-import { getModulePath, assertNever, filter, pipe, map } from '@zeroconf/codegen/Util';
-import { TypeNode, FieldDefinitionNode, InputValueDefinitionNode } from 'graphql';
+import { getModulePath } from '@zeroconf/codegen/Util';
 import * as ts from 'typescript';
 
 interface GenerateOptions {
 	context?: string;
 	headerComment?: string;
 	root?: string;
-}
-
-function resolveTypeNode(node: TypeNode): FieldType {
-	switch (node.kind) {
-		case 'ListType':
-			return { listOf: resolveTypeNode(node.type), nullable: true };
-		case 'NamedType':
-			return { fieldType: node.name.value, nullable: true };
-		case 'NonNullType':
-			return { ...resolveTypeNode(node.type), nullable: false };
-		default:
-			return assertNever(node, `Unknown type node: ${node ?? node!.kind}`);
-	}
-}
-
-function resolveType(node: FieldDefinitionNode | InputValueDefinitionNode): Field {
-	return {
-		fieldName: node.name.value,
-		...resolveTypeNode(node.type),
-	};
 }
 
 const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtension> = {
@@ -89,10 +66,6 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 		const { schemaContext } = context.graphql;
 
 		let outputFile = createSourceFile('');
-
-		const resolvers: {
-			[typeName: string]: (Field & { fieldArgs?: Field[] })[];
-		} = {};
 
 		schemaContext.visitSchema({});
 
@@ -128,31 +101,11 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			generateRelayConnectionInterface(),
 
 			// Generate resolver output types from schema.
-			...pipe(
-				schemaContext.typeInfo.interfaceDefinitions.keys(),
-				filter((typeName) => !relayTypes.includes(typeName)),
-				map((typeName) =>
-					generateObjectType(schemaContext, typeName, schemaContext.typeInfo.getFieldDefinitionMap(typeName)),
-				),
-			),
-			...pipe(
-				schemaContext.typeInfo.objectDefinitions.keys(),
-				filter((typeName) => !relayTypes.includes(typeName)),
-				map((typeName) =>
-					generateObjectType(schemaContext, typeName, schemaContext.typeInfo.getFieldDefinitionMap(typeName)),
-				),
-			),
+			...generateInterfaceOutputTypes(schemaContext),
+			...generateObjectOutputTypes(schemaContext),
 
 			// Generate resolvers from schema.
-			...pipe(
-				schemaContext.typeInfo.objectDefinitions.keys(),
-				filter((typeName) => !relayTypes.includes(typeName)),
-				map((typeName: string) => ({
-					typeName,
-					fields: schemaContext.typeInfo.getFieldDefinitionMap(typeName),
-				})),
-				map(([typeName, fields]) => generateObjectTypeFieldResolvers(typeName, fields)),
-			),
+			...generateObjectTypeResolvers(schemaContext),
 		]);
 
 		return printSourceFile(addHeaderComment(outputFile, headerComment), context.outputStream);

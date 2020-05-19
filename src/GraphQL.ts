@@ -325,6 +325,10 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 		return fieldDefinitionMap;
 	}
 
+	public getFieldDefinitions(parentTypeName: string): IterableIterator<FieldDefinitionNode> {
+		return this.getFieldDefinitionMap(parentTypeName).values();
+	}
+
 	public getInterfacesForObjectType(typeName: string): ReadonlySet<string> {
 		return this.objectTypeInterfacesMap.get(typeName) ?? new Set();
 	}

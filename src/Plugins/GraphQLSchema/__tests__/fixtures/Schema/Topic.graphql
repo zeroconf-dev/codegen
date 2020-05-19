@@ -1,7 +1,7 @@
 type Topic implements Node {
     id: ID!
     subject: String!
-    author: Person!
+    author: Person! @resolve
 }
 
 type TopicEdge implements Edge {
