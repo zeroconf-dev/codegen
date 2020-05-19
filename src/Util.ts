@@ -5,6 +5,8 @@ export interface ModulePath {
 	importPath: string;
 }
 
+export const filterNonNull = <T>(arr: Maybe<T>[]): T[] => arr.filter(e => e != null) as T[];
+
 export function getModulePath(modulePathStr: string): ModulePath {
 	const [importPath, importNameRaw] = modulePathStr.split('#');
 	const first = importNameRaw[0];

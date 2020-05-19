@@ -1,5 +1,5 @@
 type Viewer
 
 extend type Query {
-    viewer: Viewer!
+    viewer: Viewer! @resolve
 }

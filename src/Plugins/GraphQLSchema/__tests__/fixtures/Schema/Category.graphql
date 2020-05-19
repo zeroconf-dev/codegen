@@ -3,7 +3,7 @@ type Category implements Node {
     """ID of forum category."""
     id: ID!
     name: String!
-    creator: Person!
+    creator: Person! @resolve
 }
 
 """Connection edge of Category type."""

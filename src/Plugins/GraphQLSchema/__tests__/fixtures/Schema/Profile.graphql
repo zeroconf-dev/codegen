@@ -4,5 +4,5 @@ type Profile implements Node & Person {
 }
 
 extend type Viewer {
-    profile: Profile!
+    profile: Profile! @resolve
 }

@@ -40,6 +40,7 @@ import {
 import { isNode } from 'graphql/language/ast';
 import { EnterLeave, getVisitFn, ASTVisitor } from 'graphql/language/visitor';
 import { promisify } from 'util';
+import { pipe, map, filter } from '@zeroconf/codegen/Util';
 
 const readFile = promisify(readFileNode);
 
@@ -329,8 +330,59 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 		return this.getFieldDefinitionMap(parentTypeName).values();
 	}
 
+	public getObjectTypeDefinitionMap(typeName: string) {
+		const objectDefinitionMap = this.objectDefinitionMap.get(typeName);
+		if (objectDefinitionMap == null) {
+			throw new Error(`No object type definitions found for type: ${typeName}`);
+		}
+		return objectDefinitionMap;
+	}
+
+
+	public getObjectTypeDefinitions(typeName: string): IterableIterator<ObjectTypeDefinitionNodes> {
+		return this.getObjectTypeDefinitionMap(typeName).values();
+	}
+
+	public getObjectTypeDescription(typeName: string) {
+		return Array.from(
+			pipe(
+				this.getObjectTypeDefinitions(typeName),
+				map(d => d.kind === Kind.OBJECT_TYPE_DEFINITION && d.description?.value),
+				filter(c => typeof c === 'string')
+			)
+		).join('\n').trim() || undefined;
+	}
+
 	public getInterfacesForObjectType(typeName: string): ReadonlySet<string> {
 		return this.objectTypeInterfacesMap.get(typeName) ?? new Set();
+	}
+
+	public getInterfaceTypeDefinitionMap(typeName: string) {
+		const interfaceDefinitionMap = this.interfaceDefinitionMap.get(typeName);
+		if (interfaceDefinitionMap == null) {
+			throw new Error(`No interface type definitions found for type: ${typeName}`);
+		}
+		return interfaceDefinitionMap;
+	}
+
+	public getInterfaceTypeDefinitions(typeName: string): IterableIterator<InterfaceTypeDefinitionNodes> {
+		return this.getInterfaceTypeDefinitionMap(typeName).values();
+	}
+
+	public getInterfaceTypeDescription(typeName: string) {
+		return Array.from(
+			pipe(
+				this.getInterfaceTypeDefinitions(typeName),
+				map(d => d.kind === Kind.INTERFACE_TYPE_DEFINITION && d.description?.value),
+				filter(c => typeof c === 'string')
+			)
+		).join('\n').trim() || undefined;
+	}
+
+	public getTypeDescription(typeName: string) {
+		return this.isInterfaceType(typeName)
+			? this.getInterfaceTypeDescription(typeName)
+			: this.getObjectTypeDescription(typeName);
 	}
 
 	public isQueryType(typeName: string): boolean {

@@ -1,7 +1,7 @@
 import { basename, extname, dirname, join } from 'path';
-import { createSourceFile, printSourceFile, filterNonNull, addHeaderComment, defaultHeaderComment } from '../Typescript';
+import { createSourceFile, printSourceFile, addHeaderComment, defaultHeaderComment } from '../Typescript';
 import * as ts from 'typescript';
-import { getModulePath, ModulePath } from '@zeroconf/codegen/Util';
+import { filterNonNull, getModulePath, ModulePath } from '@zeroconf/codegen/Util';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 
 enum ExportType {

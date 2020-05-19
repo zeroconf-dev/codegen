@@ -1,7 +1,7 @@
 type Post implements Node {
     id: ID!
     content: String!
-    author: Person!
+    author: Person! @resolve
 }
 
 type PostEdge implements Edge {
@@ -15,5 +15,5 @@ type PostConnection implements Connection {
 }
 
 extend type Topic {
-    posts(first: Int, after: String): PostConnection!
+    posts(first: Int, after: String): PostConnection! @resolve
 }

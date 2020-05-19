@@ -14,12 +14,16 @@ interface Connection {
     pageInfo: PageInfo!
 }
 
+"""
+The Relay connection edge interface.
+All edges of a connection must implement this interface.
+"""
 interface Edge {
     cursor: String!
     node: Node
 }
 
 extend type Query {
-    node(id: ID!): Node
-    nodes(ids: [ID!]!): [Node]!
+    node(id: ID!): Node @resolve
+    nodes(ids: [ID!]!): [Node]! @resolve
 }

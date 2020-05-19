@@ -1,7 +1,7 @@
 type Forum implements Node {
     id: ID!
     name: String!
-    category: Category!
+    category: Category! @resolve
     creator: Person!
 }
 

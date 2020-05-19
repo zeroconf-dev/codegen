@@ -28,6 +28,7 @@ import {
 	generateInterfaceOutputTypes,
 	generateObjectOutputTypes,
 	generateObjectTypeResolvers,
+	generateObjectResponseTypes,
 } from '@zeroconf/codegen/Plugins/GraphQLResolver/GraphQLResolverHelpers';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import {
@@ -83,7 +84,6 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			generateResolversFnUtilityType(),
 			generateUnwrapPromiseUtilityType(),
 			generateResolverReturnTypeUtilityType(),
-			generateResponseTypeMapInterface([]),
 			generateExtractResponseTypeLookupUtilityType(),
 			generateExtractResponseTypeUtilityType(),
 			generateResponseTypeLookupUtilityType(),
@@ -106,6 +106,12 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 
 			// Generate resolvers from schema.
 			...generateObjectTypeResolvers(schemaContext),
+
+			// Generate resolved response types.
+			// The complete type definitions (output types and resolvers combined),
+			// and return value unwrapped.
+			generateResponseTypeMapInterface(schemaContext.typeInfo.objectDefinitions.keys()),
+			...generateObjectResponseTypes(schemaContext),
 		]);
 
 		return printSourceFile(addHeaderComment(outputFile, headerComment), context.outputStream);
