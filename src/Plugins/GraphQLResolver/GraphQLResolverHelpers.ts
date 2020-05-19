@@ -1,7 +1,8 @@
 import * as ts from 'typescript';
-import { ModulePath, capitalize } from '@zeroconf/codegen/Util';
+import { ModulePath, capitalize, pipe, map, assertNever, filter } from '@zeroconf/codegen/Util';
 import { createImportDeclarationFromModulePath } from '@zeroconf/codegen/Typescript';
 import { GenerateSchemaContext } from '@zeroconf/codegen/GraphQL';
+import { FieldDefinitionNode, NamedTypeNode, ListTypeNode, NonNullTypeNode, Kind } from 'graphql';
 
 export const generateGraphQLResolveInfoImportStatement = () =>
 	ts.createImportDeclaration(
@@ -1278,6 +1279,30 @@ const createTypeFromField = (field: Field | FieldType): ts.TypeNode =>
 		  )
 		: createMaybeType(createListType(createTypeFromField(field.listOf)), field.nullable);
 
+const createTypeFromNode = (node: NamedTypeNode | ListTypeNode | NonNullTypeNode): ts.TypeNode => {
+	switch (node.kind) {
+		case Kind.NAMED_TYPE:
+			return isScalarType(node.name.value) ? createScalarType(node.name.value) : createNamedType(node.name.value);
+		case Kind.LIST_TYPE:
+			return createListType(createTypeFromNode(node.type));
+		case Kind.NON_NULL_TYPE:
+			return createMaybeType(createTypeFromNode(node.type), true);
+		default:
+			return assertNever(node, `Unknown node kind: ${node == null ? 'NULL' : node!.kind ?? 'NULL'}`);
+	}
+};
+
+const resolveRelayInterfaceTypeArgs = (interfaceName: string, typeName: string): string[] | undefined => {
+	switch (true) {
+		case interfaceName.endsWith('Edge'):
+			return [typeName.substr(0, typeName.length - 'Edge'.length)];
+		case interfaceName.endsWith('Connection'):
+			return [typeName.substr(0, typeName.length - 'Connection'.length)];
+		default:
+			return undefined;
+	}
+};
+
 /**
  * Generate GraphQL object types.
  *
@@ -1301,50 +1326,59 @@ const createTypeFromField = (field: Field | FieldType): ts.TypeNode =>
 export const generateObjectType = (
 	context: GenerateSchemaContext,
 	typeName: string,
-	fields: Field[],
-	interfaceMap: { [typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[] },
+	fields: ReadonlyMap<string, FieldDefinitionNode>,
 ) => {
-	const interfaces = interfaceMap[typeName];
-
+	const interfaces = context.typeInfo.getInterfacesForObjectType(typeName);
 	return ts.createInterfaceDeclaration(
 		undefined,
 		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
 		ts.createIdentifier(typeName),
 		undefined,
-		interfaces == null || interfaces.length === 0
+		interfaces.size === 0
 			? undefined
 			: [
-					ts.createHeritageClause(
-						ts.SyntaxKind.ExtendsKeyword,
-						interfaces.map((iface) =>
-							ts.createExpressionWithTypeArguments(
-								iface.typeArgs == null || iface.typeArgs.length === 0
-									? undefined
-									: iface.typeArgs.map((typeArg) =>
-											ts.createTypeReferenceNode(ts.createIdentifier(typeArg), undefined),
-									  ),
-								ts.createIdentifier(iface.typeName),
+					ts.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [
+						...pipe(
+							interfaces.keys(),
+							map((iface) =>
+								ts.createExpressionWithTypeArguments(
+									resolveRelayInterfaceTypeArgs(iface, typeName)?.map((typeArg) =>
+										ts.createTypeReferenceNode(ts.createIdentifier(typeArg), undefined),
+									),
+									ts.createIdentifier(iface),
+								),
 							),
 						),
-					),
+					]),
 			  ],
 		[
-			...context.typeInfo.isInterfaceType(typeName) ? [] : [
-				ts.createPropertySignature(
-					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-					ts.createStringLiteral(' $__typename'),
-					undefined,
-					ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
-					undefined,
-				)
-			],
-			...fields.map((field) =>
-				ts.createPropertySignature(
-					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-					ts.createIdentifier(field.fieldName),
-					undefined,
-					createTypeFromField(field),
-					undefined,
+			...(context.typeInfo.isInterfaceType(typeName)
+				? []
+				: [
+						ts.createPropertySignature(
+							[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+							ts.createStringLiteral(' $__typename'),
+							undefined,
+							ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
+							undefined,
+						),
+				  ]),
+			...pipe(
+				fields.values(),
+				filter(
+					(field) =>
+						field.arguments == null ||
+						field.directives == null ||
+						field.directives.find((d) => d.name.value === 'resolve') == null,
+				),
+				map((field) =>
+					ts.createPropertySignature(
+						[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+						ts.createIdentifier(field.name.value),
+						undefined,
+						createTypeFromNode(field.type),
+						undefined,
+					),
 				),
 			),
 		],
@@ -1353,43 +1387,36 @@ export const generateObjectType = (
 
 export const generateObjectTypeFieldResolvers = (
 	typeName: string,
-	fields: Field[],
-) => [
-	...fields.reduce((carry, field) => [
-		...carry,
-		ts.createTypeAliasDeclaration(
-			undefined,
-			undefined,
-			ts.createIdentifier(capitalize(typeName, field.fieldName, 'Args')),
-			undefined,
-			ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-		),
-		ts.createTypeAliasDeclaration(
-			undefined,
-			undefined,
-			ts.createIdentifier(capitalize(typeName, field.fieldName, 'Resolver')),
-			undefined,
-			ts.createTypeReferenceNode(
-				ts.createIdentifier('ResolverFn'),
-				[
+	fields: FieldDefinitionNode[],
+): (ts.InterfaceDeclaration | ts.TypeAliasDeclaration)[] => [
+	...fields.reduce(
+		(carry, field) => [
+			...carry,
+			ts.createTypeAliasDeclaration(
+				undefined,
+				undefined,
+				ts.createIdentifier(capitalize(typeName, field.fieldName, 'Args')),
+				undefined,
+				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+			),
+			ts.createTypeAliasDeclaration(
+				undefined,
+				undefined,
+				ts.createIdentifier(capitalize(typeName, field.fieldName, 'Resolver')),
+				undefined,
+				ts.createTypeReferenceNode(ts.createIdentifier('ResolverFn'), [
 					createTypeFromField(field),
-					ts.createTypeReferenceNode(
-						ts.createIdentifier(typeName),
-						undefined,
-					),
-					ts.createTypeReferenceNode(
-						ts.createIdentifier('Context'),
-						undefined,
-					),
+					ts.createTypeReferenceNode(ts.createIdentifier(typeName), undefined),
+					ts.createTypeReferenceNode(ts.createIdentifier('Context'), undefined),
 					ts.createTypeReferenceNode(
 						ts.createIdentifier(capitalize(typeName, field.fieldName, 'Args')),
 						undefined,
 					),
-				],
+				]),
 			),
-		),
-	],
-	[] as ts.TypeAliasDeclaration[]),
+		],
+		[] as ts.TypeAliasDeclaration[],
+	),
 	ts.createInterfaceDeclaration(
 		undefined,
 		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],

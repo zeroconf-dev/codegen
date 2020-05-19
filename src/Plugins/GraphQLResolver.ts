@@ -38,27 +38,14 @@ import {
 	defaultHeaderComment,
 	addHeaderComment,
 } from '@zeroconf/codegen/Typescript';
-import { getModulePath, assertNever } from '@zeroconf/codegen/Util';
-import { TypeNode, FieldDefinitionNode, InputValueDefinitionNode, TypeInfo } from 'graphql';
+import { getModulePath, assertNever, filter, pipe, map } from '@zeroconf/codegen/Util';
+import { TypeNode, FieldDefinitionNode, InputValueDefinitionNode } from 'graphql';
 import * as ts from 'typescript';
 
 interface GenerateOptions {
 	context?: string;
 	headerComment?: string;
 	root?: string;
-}
-
-function formatType(type: TypeNode): string {
-	switch (type.kind) {
-		case 'ListType':
-			return `[${formatType(type.type)}]`;
-		case 'NonNullType':
-			return `${formatType(type.type)}!`;
-		case 'NamedType':
-			return type.name.value;
-		default:
-			return assertNever(type, `Unknown type node kind: ${type == null ? null : type!.kind}`);
-	}
 }
 
 function resolveTypeNode(node: TypeNode): FieldType {
@@ -80,19 +67,6 @@ function resolveType(node: FieldDefinitionNode | InputValueDefinitionNode): Fiel
 		...resolveTypeNode(node.type),
 	};
 }
-
-function resolveInterfaceTypeArgs(interfaceName: string, typeName: string): string[] | undefined {
-	switch (true) {
-		case interfaceName.endsWith('Edge'):
-			return [typeName.substr(0, typeName.length - 'Edge'.length)];
-		case interfaceName.endsWith('Connection'):
-			return [typeName.substr(0, typeName.length - 'Connection'.length)];
-		default:
-			return undefined;
-	}
-}
-
-// class ResolverRegistry {}
 
 const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtension> = {
 	config: async (config) => {
@@ -116,91 +90,11 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 
 		let outputFile = createSourceFile('');
 
-		const types: {
-			[typeName: string]: Field[];
-		} = {};
-		const interfaceMap: {
-			[typeName: string]: undefined | { typeName: string; typeArgs?: string[] }[];
-		} = {};
 		const resolvers: {
 			[typeName: string]: (Field & { fieldArgs?: Field[] })[];
 		} = {};
 
-		let currentTypeFields: Field[];
-		const visit: SchemaASTVisitor = {
-			Directive: (node, typeInfo) => {
-				// const parentType = typeInfo.parentType.name.value;
-				// logger.verbose(`@${node.name.value} on Type: ${parentType}`);
-			},
-			FieldDefinition: (node, typeInfo) => {
-				const parentType = typeInfo.parentType.name.value;
-				if (
-					(node.arguments != null && node.arguments.length > 0) ||
-					(node.directives != null && node.directives.find(d => d.name.value === 'resolve') != null)
-					) {
-					// logger.debug(`Field: ${parentType}.${node.name.value}: ${formatType(node.type)}`);
-					if (resolvers[parentType] == null) {
-						resolvers[parentType] = [];
-					}
-					// logger.verbose(node.arguments);
-					resolvers[parentType].push({
-						...resolveType(node),
-						fieldArgs: (node.arguments ?? []).map(argDef => ({
-							...resolveType(argDef),
-						})),
-					});
-				} else {
-					currentTypeFields.push(resolveType(node));
-				}
-			},
-			InterfaceTypeDefinition: (node) => {
-				// logger.debug(`Interface: ${node.name.value}`);
-				if (types[node.name.value] == null) {
-					currentTypeFields = types[node.name.value] = [];
-				} else {
-					currentTypeFields = types[node.name.value];
-				}
-			},
-			InterfaceTypeExtension: (node) => {
-				// logger.debug(`Interface extension: ${node.name.value}`);
-				if (types[node.name.value] == null) {
-					currentTypeFields = types[node.name.value] = [];
-				} else {
-					currentTypeFields = types[node.name.value];
-				}
-			},
-			ObjectTypeDefinition: (node) => {
-				const typeName = node.name.value;
-				// logger.debug(`Type: ${typeName}`);
-				if (types[typeName] == null) {
-					currentTypeFields = types[typeName] = [];
-				} else {
-					currentTypeFields = types[typeName];
-				}
-				if (node.interfaces != null) {
-					const currentInterfaceMap = interfaceMap[typeName];
-					const additionalInterfaceMap = (interfaceMap[typeName] = node.interfaces.map((iface) => ({
-						typeName: iface.name.value,
-						typeArgs: resolveInterfaceTypeArgs(iface.name.value, typeName),
-					})));
-					if (currentInterfaceMap == null) {
-						interfaceMap[typeName] = additionalInterfaceMap;
-					} else {
-						interfaceMap[typeName] = [...currentInterfaceMap, ...additionalInterfaceMap];
-					}
-				}
-			},
-			ObjectTypeExtension: (node) => {
-				// logger.debug(`Type extension: ${node.name.value}`);
-				if (types[node.name.value] == null) {
-					currentTypeFields = types[node.name.value] = [];
-				} else {
-					currentTypeFields = types[node.name.value];
-				}
-			},
-		};
-
-		schemaContext.visitSchema(visit);
+		schemaContext.visitSchema({});
 
 		outputFile = ts.updateSourceFileNode(outputFile, [
 			...outputFile.statements,
@@ -234,13 +128,31 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			generateRelayConnectionInterface(),
 
 			// Generate resolver output types from schema.
-			...Object.entries(types)
-				.filter(([typeName]) => !relayTypes.includes(typeName))
-				.map(([typeName, fields]) => generateObjectType(schemaContext, typeName, fields, interfaceMap)),
+			...pipe(
+				schemaContext.typeInfo.interfaceDefinitions.keys(),
+				filter((typeName) => !relayTypes.includes(typeName)),
+				map((typeName) =>
+					generateObjectType(schemaContext, typeName, schemaContext.typeInfo.getFieldDefinitionMap(typeName)),
+				),
+			),
+			...pipe(
+				schemaContext.typeInfo.objectDefinitions.keys(),
+				filter((typeName) => !relayTypes.includes(typeName)),
+				map((typeName) =>
+					generateObjectType(schemaContext, typeName, schemaContext.typeInfo.getFieldDefinitionMap(typeName)),
+				),
+			),
 
 			// Generate resolvers from schema.
-			...Object.entries(resolvers)
-				.reduce((carry, [typeName, fields]) => [...carry, ...generateObjectTypeFieldResolvers(typeName, fields)], [] as ts.Statement[]),
+			...pipe(
+				schemaContext.typeInfo.objectDefinitions.keys(),
+				filter((typeName) => !relayTypes.includes(typeName)),
+				map((typeName: string) => ({
+					typeName,
+					fields: schemaContext.typeInfo.getFieldDefinitionMap(typeName),
+				})),
+				map(([typeName, fields]) => generateObjectTypeFieldResolvers(typeName, fields)),
+			),
 		]);
 
 		return printSourceFile(addHeaderComment(outputFile, headerComment), context.outputStream);

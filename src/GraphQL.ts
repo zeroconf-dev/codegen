@@ -1,5 +1,5 @@
+import { AnsiLogger } from 'ansi-logger';
 import { readFile as readFileNode, PathLike } from 'fs';
-import { promisify } from 'util';
 import {
 	ASTNode,
 	buildASTSchema,
@@ -37,9 +37,9 @@ import {
 	visit,
 	Visitor,
 } from 'graphql';
-import { EnterLeave, getVisitFn, ASTVisitor } from 'graphql/language/visitor';
 import { isNode } from 'graphql/language/ast';
-import { AnsiLogger } from 'ansi-logger';
+import { EnterLeave, getVisitFn, ASTVisitor } from 'graphql/language/visitor';
+import { promisify } from 'util';
 
 const readFile = promisify(readFileNode);
 
@@ -73,20 +73,14 @@ export interface SchemaASTKindToNode {
 export type SchemaASTNode = SchemaASTKindToNode[keyof SchemaASTKindToNode];
 
 export type SchemaASTVisitor = SchemaVisitor;
-export type SchemaVisitor =
-	| SchemaEnterLeaveVisitor
-	| SchemaShapeMapVisitor;
+export type SchemaVisitor = SchemaEnterLeaveVisitor | SchemaShapeMapVisitor;
 
-type SchemaEnterLeaveVisitor =
-	EnterLeave<
-		| SchemaVisitFn<SchemaASTNode>
-		| { [K in keyof SchemaASTKindToNode]?: SchemaVisitFn<SchemaASTKindToNode[K]> }
-	>;
+type SchemaEnterLeaveVisitor = EnterLeave<
+	SchemaVisitFn<SchemaASTNode> | { [K in keyof SchemaASTKindToNode]?: SchemaVisitFn<SchemaASTKindToNode[K]> }
+>;
 
 type SchemaShapeMapVisitor = {
-	[K in keyof SchemaASTKindToNode]?:
-		| SchemaVisitFn<SchemaASTKindToNode[K]>
-		| EnterLeave<SchemaVisitFn<SchemaASTNode>>;
+	[K in keyof SchemaASTKindToNode]?: SchemaVisitFn<SchemaASTKindToNode[K]> | EnterLeave<SchemaVisitFn<SchemaASTNode>>;
 };
 
 /**
@@ -96,7 +90,7 @@ type SchemaShapeMapVisitor = {
 export type SchemaVisitFn<TVisitedNode extends SchemaASTNode> = (
 	/** The current node being visiting.*/
 	node: TVisitedNode,
-	typeInfo: SchemaTypeInfo<TVisitedNode>
+	typeInfo: SchemaTypeInfo<TVisitedNode>,
 ) => any;
 
 type FieldParentDefinitionNode =
@@ -105,8 +99,7 @@ type FieldParentDefinitionNode =
 	| InterfaceTypeDefinitionNode
 	| InterfaceTypeExtensionNode
 	| ObjectTypeDefinitionNode
-	| ObjectTypeExtensionNode
-	;
+	| ObjectTypeExtensionNode;
 
 type NameParentDefinitionNode =
 	| DirectiveDefinitionNode
@@ -125,8 +118,7 @@ type NameParentDefinitionNode =
 	| ScalarTypeDefinitionNode
 	| ScalarTypeExtensionNode
 	| UnionTypeDefinitionNode
-	| UnionTypeExtensionNode
-	;
+	| UnionTypeExtensionNode;
 
 type NamedTypeParentDefinitionNode =
 	| FieldDefinitionNode
@@ -138,21 +130,15 @@ type NamedTypeParentDefinitionNode =
 	| ObjectTypeDefinitionNode
 	| ObjectTypeExtensionNode
 	| UnionTypeDefinitionNode
-	| UnionTypeExtensionNode
-	;
+	| UnionTypeExtensionNode;
 
-type NonNullTypeParentDefinitionNode =
-	| FieldDefinitionNode
-	| InputValueDefinitionNode
-	| ListTypeNode
-	;
+type NonNullTypeParentDefinitionNode = FieldDefinitionNode | InputValueDefinitionNode | ListTypeNode;
 
 type ListTypeParentDefinitionNode =
 	| FieldDefinitionNode
 	| InputObjectTypeDefinitionNode
 	| NonNullTypeNode
-	| ListTypeNode
-	;
+	| ListTypeNode;
 
 type DirectiveParentDefinitionNode =
 	| EnumTypeDefinitionNode
@@ -171,20 +157,15 @@ type DirectiveParentDefinitionNode =
 	| SchemaDefinitionNode
 	| SchemaExtensionNode
 	| UnionTypeDefinitionNode
-	| UnionTypeExtensionNode
-	;
+	| UnionTypeExtensionNode;
 
-type EnumValueParentDefinitionNode =
-	| EnumTypeDefinitionNode
-	| EnumTypeExtensionNode
-	;
+type EnumValueParentDefinitionNode = EnumTypeDefinitionNode | EnumTypeExtensionNode;
 
 type InputValueParentDefinitionNode =
 	| DirectiveDefinitionNode
 	| FieldDefinitionNode
 	| InputObjectTypeDefinitionNode
-	| InputObjectTypeExtensionNode
-	;
+	| InputObjectTypeExtensionNode;
 
 /**
  * Given a valid AST, this map resolves valid parent nodes from any Schema AST Node.
@@ -251,46 +232,30 @@ interface SchemaASTParentTypeNode {
  * Resolve the node at a single level higher up in the AST
  * given a valid tree.
  */
-type SchemaParentNode<TSchemaASTNode extends SchemaASTNode> =
-	TSchemaASTNode['kind'] extends keyof SchemaASTParentNode
-		? SchemaASTParentNode[TSchemaASTNode['kind']]
+type SchemaParentNode<TSchemaASTNode extends SchemaASTNode> = TSchemaASTNode['kind'] extends keyof SchemaASTParentNode
+	? SchemaASTParentNode[TSchemaASTNode['kind']]
 	: Maybe<SchemaASTNode>;
 
-type SchemaParentType<TSchemaASTNode extends SchemaASTNode> =
-	TSchemaASTNode['kind'] extends keyof SchemaASTParentTypeNode
-		? SchemaASTParentTypeNode[TSchemaASTNode['kind']]
-		: Maybe<SchemaASTNode>
+type SchemaParentType<
+	TSchemaASTNode extends SchemaASTNode
+> = TSchemaASTNode['kind'] extends keyof SchemaASTParentTypeNode
+	? SchemaASTParentTypeNode[TSchemaASTNode['kind']]
+	: Maybe<SchemaASTNode>;
 
-type EnumTypeDefinitionNodes =
-	| EnumTypeDefinitionNode
-	| EnumTypeExtensionNode
-	;
+export type EnumTypeDefinitionNodes = EnumTypeDefinitionNode | EnumTypeExtensionNode;
 
-type InterfaceTypeDefinitionNodes =
-	| InterfaceTypeDefinitionNode
-	| InterfaceTypeExtensionNode
-	;
+export type InterfaceTypeDefinitionNodes = InterfaceTypeDefinitionNode | InterfaceTypeExtensionNode;
 
-type InputObjectTypeDefinitionNodes =
-	| InputObjectTypeDefinitionNode
-	| InputObjectTypeExtensionNode
-	;
+export type InputObjectTypeDefinitionNodes = InputObjectTypeDefinitionNode | InputObjectTypeExtensionNode;
 
-type ObjectTypeDefinitionNodes =
-	| ObjectTypeDefinitionNode
-	| ObjectTypeExtensionNode
-	;
+export type ObjectTypeDefinitionNodes = ObjectTypeDefinitionNode | ObjectTypeExtensionNode;
 
-type UnionTypeDefinitionNodes =
-	| UnionTypeDefinitionNode
-	| UnionTypeExtensionNode
-	;
+export type UnionTypeDefinitionNodes = UnionTypeDefinitionNode | UnionTypeExtensionNode;
 
-type ParentTypeDefinitionNodes =
+export type ParentTypeDefinitionNodes =
 	| InterfaceTypeDefinitionNodes
 	| InputObjectTypeDefinitionNodes
-	| ObjectTypeDefinitionNodes
-	;
+	| ObjectTypeDefinitionNodes;
 
 class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	public readonly schema: GraphQLSchema;
@@ -305,6 +270,7 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	private readonly interfaceDefinitionMap: Map<string, InterfaceTypeDefinitionNodes[]> = new Map();
 	private readonly objectDefinitionMap: Map<string, ObjectTypeDefinitionNodes[]> = new Map();
 	private readonly unionDefinitionMap: Map<string, UnionTypeDefinitionNodes[]> = new Map();
+	private readonly objectTypeInterfacesMap: Map<string, Set<string>> = new Map();
 
 	private readonly parentNodeStack: SchemaASTNode[] = [];
 	private parentTypeDefinition: Maybe<ParentTypeDefinitionNodes> = null;
@@ -343,14 +309,6 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 		return this.parentTypeDefinition as SchemaParentType<TSchemaASTNode>;
 	}
 
-	public getFieldDefinitionMap(parentTypeName: string): ReadonlyMap<string, FieldDefinitionNode> {
-		const fieldDefinitionMap = this.fieldFromParentDefinitionMap.get(parentTypeName);
-		if (fieldDefinitionMap == null) {
-			throw new Error(`No field map found for parentType: ${parentTypeName}`);
-		}
-		return fieldDefinitionMap;
-	}
-
 	public getEnumValues(enumTypeName: string): readonly EnumValueDefinitionNode[] {
 		const enumValues = this.enumValueMap.get(enumTypeName);
 		if (enumValues == null) {
@@ -359,12 +317,21 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 		return enumValues;
 	}
 
+	public getFieldDefinitionMap(parentTypeName: string): ReadonlyMap<string, FieldDefinitionNode> {
+		const fieldDefinitionMap = this.fieldFromParentDefinitionMap.get(parentTypeName);
+		if (fieldDefinitionMap == null) {
+			throw new Error(`No field map found for parentType: ${parentTypeName}`);
+		}
+		return fieldDefinitionMap;
+	}
+
+	public getInterfacesForObjectType(typeName: string): ReadonlySet<string> {
+		return this.objectTypeInterfacesMap.get(typeName) ?? new Set();
+	}
+
 	public isQueryType(typeName: string): boolean {
 		const queryType = this.schema.getQueryType();
-		return (
-			(queryType == null && typeName === 'Query') ||
-			(queryType != null && queryType.name === typeName)
-		);
+		return (queryType == null && typeName === 'Query') || (queryType != null && queryType.name === typeName);
 	}
 
 	public isMutationType(typeName: string): boolean {
@@ -433,7 +400,9 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 
 				const enumValues = this.enumValueMap.get(enumTypeName);
 				if (enumValues == null) {
-					throw new TypeError(`Invalid type, enum type ${enumTypeName} not found in values map, for enum value definition: ${qualifiedEnumValueName}`);
+					throw new TypeError(
+						`Invalid type, enum type ${enumTypeName} not found in values map, for enum value definition: ${qualifiedEnumValueName}`,
+					);
 				}
 				enumValues.push(node);
 				break;
@@ -451,7 +420,9 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 
 				const fieldFromParentDefinitions = this.fieldFromParentDefinitionMap.get(parentTypeName);
 				if (fieldFromParentDefinitions == null) {
-					throw new TypeError(`Invalid type, field definition: ${qualifiedFieldName}, without field from parent map.`);
+					throw new TypeError(
+						`Invalid type, field definition: ${qualifiedFieldName}, without field from parent map.`,
+					);
 				}
 
 				if (this.fieldDefinitionMap.has(qualifiedFieldName) || fieldFromParentDefinitions.has(fieldName)) {
@@ -472,7 +443,10 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 				inputObjectDefinitions.push(node);
 				this.inputObjectDefinitionMap.set(typeName, inputObjectDefinitions);
 
-				this.fieldFromParentDefinitionMap.set(typeName, this.fieldFromParentDefinitionMap.get(typeName) ?? new Map());
+				this.fieldFromParentDefinitionMap.set(
+					typeName,
+					this.fieldFromParentDefinitionMap.get(typeName) ?? new Map(),
+				);
 
 				this.parentTypeDefinition = node;
 				break;
@@ -486,7 +460,16 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 				interfaceDefinitions.push(node);
 				this.interfaceDefinitionMap.set(typeName, interfaceDefinitions);
 
-				this.fieldFromParentDefinitionMap.set(typeName, this.fieldFromParentDefinitionMap.get(typeName) ?? new Map());
+				this.fieldFromParentDefinitionMap.set(
+					typeName,
+					this.fieldFromParentDefinitionMap.get(typeName) ?? new Map(),
+				);
+
+				if (node.interfaces != null) {
+					const interfaces = this.objectTypeInterfacesMap.get(typeName) ?? new Set();
+					node.interfaces.forEach((iface) => interfaces.add(iface.name.value));
+					this.objectTypeInterfacesMap.set(typeName, interfaces);
+				}
 
 				this.parentTypeDefinition = node;
 				break;
@@ -500,7 +483,16 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 				objectDefinitions.push(node);
 				this.objectDefinitionMap.set(typeName, objectDefinitions);
 
-				this.fieldFromParentDefinitionMap.set(typeName, this.fieldFromParentDefinitionMap.get(typeName) ?? new Map());
+				this.fieldFromParentDefinitionMap.set(
+					typeName,
+					this.fieldFromParentDefinitionMap.get(typeName) ?? new Map(),
+				);
+
+				if (node.interfaces != null) {
+					const interfaces = this.objectTypeInterfacesMap.get(typeName) ?? new Set();
+					node.interfaces.forEach((iface) => interfaces.add(iface.name.value));
+					this.objectTypeInterfacesMap.set(typeName, interfaces);
+				}
 
 				this.parentTypeDefinition = node;
 				break;
@@ -546,8 +538,10 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	}
 }
 
-type PrivateSchemaTypeInfo<TSchemaASTNode extends SchemaASTNode>
-	= Omit<SchemaTypeInfo<TSchemaASTNode>, 'parentNodeStack'> & { readonly parentNodeStack: SchemaASTNode[] };
+type PrivateSchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> = Omit<
+	SchemaTypeInfo<TSchemaASTNode>,
+	'parentNodeStack'
+> & { readonly parentNodeStack: SchemaASTNode[] };
 
 function visitWithTypeInfo(
 	typeInfo: PrivateSchemaTypeInfo<SchemaASTNode>,
@@ -558,7 +552,7 @@ function visitWithTypeInfo(
 			typeInfo.enter(node);
 			const fn = getVisitFn(visitor as ASTVisitor, node.kind, false) as Maybe<SchemaVisitFn<SchemaASTNode>>;
 			if (typeof fn === 'function') {
-				const result = fn.apply(visitor, [node, typeInfo as unknown as SchemaTypeInfo<SchemaASTNode>]);
+				const result = fn.apply(visitor, [node, (typeInfo as unknown) as SchemaTypeInfo<SchemaASTNode>]);
 				typeInfo.parentNodeStack.push(node);
 				if (result !== undefined) {
 					typeInfo.leave(node);
@@ -583,7 +577,7 @@ function visitWithTypeInfo(
 			return result;
 		},
 	};
-};
+}
 
 class GenerateSchemaContext {
 	public readonly schema: GraphQLSchema;
@@ -604,7 +598,13 @@ class GenerateSchemaContext {
 
 	public visitSchema(visitor: SchemaASTVisitor) {
 		this.document.definitions.forEach((def) => {
-			visit(def, visitWithTypeInfo(this.typeInfo as unknown as PrivateSchemaTypeInfo<SchemaASTNode>, visitor) as ASTVisitor);
+			visit(
+				def,
+				visitWithTypeInfo(
+					(this.typeInfo as unknown) as PrivateSchemaTypeInfo<SchemaASTNode>,
+					visitor,
+				) as ASTVisitor,
+			);
 		});
 	}
 }
@@ -618,10 +618,7 @@ export interface GraphQLSchemaCodegenContextExtension {
 export type { GenerateSchemaContext };
 
 export async function loadSourceFile(sourcePath: PathLike): Promise<DocumentNode> {
-	return parse(new Source(
-		(await readFile(sourcePath)).toString(),
-		sourcePath.toString(),
-	));
+	return parse(new Source((await readFile(sourcePath)).toString(), sourcePath.toString()));
 }
 
 export function createContext(documents: DocumentNode[] | DocumentNode, logger: AnsiLogger<any>) {
@@ -629,7 +626,7 @@ export function createContext(documents: DocumentNode[] | DocumentNode, logger: 
 
 	const errors = validateSchema(context.schema);
 	if (errors.length > 0) {
-		throw new Error(errors.map(error => printError(error)).join('\n\n'));
+		throw new Error(errors.map((error) => printError(error)).join('\n\n'));
 	}
 
 	return context;
