@@ -9,7 +9,7 @@ async function main() {
 	return run(config);
 }
 
-main().catch(err => {
+main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });

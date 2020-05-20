@@ -79,5 +79,6 @@
 	],
 	"include": [
 		"./src/**/*.ts",
+		"./generated/**/*.ts"
 	],
 }

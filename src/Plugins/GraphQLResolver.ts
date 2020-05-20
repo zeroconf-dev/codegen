@@ -5,7 +5,11 @@ import {
 	generateExtractResponseTypeLookupUtilityType,
 	generateExtractResponseTypeUtilityType,
 	generateGraphQLResolveInfoImportStatement,
+	generateInterfaceOutputTypes,
 	generateMaybeUtilityType,
+	generateObjectOutputTypes,
+	generateObjectResponseTypes,
+	generateObjectTypeResolvers,
 	generatePreserveMaybeUtilityType,
 	generateRelayBackwardConnectionArgsType,
 	generateRelayConnectionArgsMapInterface,
@@ -25,18 +29,15 @@ import {
 	generateRootType,
 	generateScalarsMapInterface,
 	generateUnwrapPromiseUtilityType,
-	generateInterfaceOutputTypes,
-	generateObjectOutputTypes,
-	generateObjectTypeResolvers,
-	generateObjectResponseTypes,
+	generateInputObjectTypes,
 } from '@zeroconf/codegen/Plugins/GraphQLResolver/GraphQLResolverHelpers';
-import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import {
-	createSourceFile,
-	printSourceFile,
-	defaultHeaderComment,
 	addHeaderComment,
+	createSourceFile,
+	defaultHeaderComment,
+	printSourceFile,
 } from '@zeroconf/codegen/Typescript';
+import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import { getModulePath } from '@zeroconf/codegen/Util';
 import * as ts from 'typescript';
 
@@ -99,6 +100,9 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 			generateRelayConnectionArgsMapInterface(),
 			generateRelayConnectionArgsUtilityType(),
 			generateRelayConnectionInterface(),
+
+			// Generate input type definitions.
+			...generateInputObjectTypes(schemaContext),
 
 			// Generate resolver output types from schema.
 			...generateInterfaceOutputTypes(schemaContext),

@@ -14,6 +14,7 @@ type CategoryEdge implements Edge {
 
 """Connection of Category type."""
 type CategoryConnection implements Connection {
+    """Category edges of this connection page."""
     edges: [CategoryEdge!]!
     pageInfo: PageInfo!
 }
@@ -21,4 +22,17 @@ type CategoryConnection implements Connection {
 extend type Viewer {
     """Fetch all categories."""
     categories(first: Int, after: String): CategoryConnection! @resolve
+}
+
+"""Input for creating a new forum category."""
+input CreateCategoryInput {
+    name: String!
+}
+
+type CreateCategoryPayload {
+    category: Category!
+}
+
+extend type Mutation {
+    createCategory(input: CreateCategoryInput!): CreateCategoryPayload!
 }

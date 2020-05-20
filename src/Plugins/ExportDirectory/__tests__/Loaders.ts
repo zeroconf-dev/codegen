@@ -1,8 +1,8 @@
 import { ExportType, generate } from '@zeroconf/codegen/Plugins/ExportDirectory';
-import { join } from 'path';
-import { PassThrough } from 'stream';
 import { createGenerateContext } from '@zeroconf/codegen/Runner';
 import { Level } from 'ansi-logger';
+import { join } from 'path';
+import { PassThrough } from 'stream';
 
 function createOutputStream(): [PassThrough, Buffer[]] {
 	const chunks: Buffer[] = [];

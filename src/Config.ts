@@ -44,7 +44,7 @@ export interface Config {
 }
 
 export async function loadConfig(): Promise<Maybe<Config>> {
-	const result = await explorer.search()
+	const result = await explorer.search();
 	return result == null ? null : result.config;
 }
 

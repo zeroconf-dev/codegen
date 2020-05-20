@@ -1,9 +1,9 @@
+import { createContext, GraphQLSchemaCodegenContextExtension, loadSourceFile } from '@zeroconf/codegen/GraphQL';
+import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import { DocumentNode, printSchema } from 'graphql';
 import { join } from 'path';
-import { loadSourceFile, createContext, GraphQLSchemaCodegenContextExtension } from '@zeroconf/codegen/GraphQL';
-import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 
-interface PluginConfig { }
+interface PluginConfig {}
 
 const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> = {
 	config: async (config) => config as PluginConfig,

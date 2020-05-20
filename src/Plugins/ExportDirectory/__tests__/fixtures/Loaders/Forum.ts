@@ -1,1 +1,1 @@
-export class ForumLoader { }
+export class ForumLoader {}

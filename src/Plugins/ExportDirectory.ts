@@ -1,8 +1,8 @@
-import { basename, extname, dirname, join } from 'path';
-import { createSourceFile, printSourceFile, addHeaderComment, defaultHeaderComment } from '../Typescript';
-import * as ts from 'typescript';
-import { filterNonNull, getModulePath, ModulePath } from '@zeroconf/codegen/Util';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
+import { filterNonNull, getModulePath, ModulePath } from '@zeroconf/codegen/Util';
+import { basename, dirname, extname, join } from 'path';
+import * as ts from 'typescript';
+import { addHeaderComment, createSourceFile, defaultHeaderComment, printSourceFile } from '../Typescript';
 
 enum ExportType {
 	ReExport = 'ReExport',
@@ -26,32 +26,17 @@ interface ConstructorParameter {
 	paramType: string;
 }
 
-type GenerateSingletonClass =
-	& {
-		additionalImports?: string[];
-		className?: string;
-		constructorParameters?: ConstructorParameter[];
-		defaultExport?: boolean
-		exportType: ExportType.SingletonClass;
-	}
-	& (
-		| { className: string; defaultExport?: boolean; }
-		| { className?: string; defaultExport: true; }
-	)
-	;
+type GenerateSingletonClass = {
+	additionalImports?: string[];
+	className?: string;
+	constructorParameters?: ConstructorParameter[];
+	defaultExport?: boolean;
+	exportType: ExportType.SingletonClass;
+} & ({ className: string; defaultExport?: boolean } | { className?: string; defaultExport: true });
 
-type GenerateOptions =
-	& GenerateOptionsBase
-	& (
-		| GenerateReExport
-		| GenerateSingletonClass
-	)
-	;
+type GenerateOptions = GenerateOptionsBase & (GenerateReExport | GenerateSingletonClass);
 
-type GenerateSingletonClassOptions =
-	& GenerateOptionsBase
-	& GenerateSingletonClass
-	;
+type GenerateSingletonClassOptions = GenerateOptionsBase & GenerateSingletonClass;
 
 interface ImportExportMap {
 	[importPath: string]: {
@@ -69,23 +54,16 @@ interface ImportExportVariable {
 
 const defaultImportTemplate = '${fileName}';
 
-const plugin: (
-	& CodegenPlugin<GenerateOptions, { export: { filePaths: string[] }}>
-	& {
-		ExportType: typeof ExportType;
-	}
-) = {
+const plugin: CodegenPlugin<GenerateOptions, { export: { filePaths: string[] } }> & {
+	ExportType: typeof ExportType;
+} = {
 	ExportType: ExportType,
 	config: async (config: any): Promise<GenerateOptions> => {
 		return config as GenerateOptions;
 	},
 	generate: async (context, options): Promise<void> => {
 		context.logger.info('Plugins/ExportDirectory');
-		const {
-			exportTemplate,
-			importPrefix,
-			importTemplate = defaultImportTemplate,
-		} = options;
+		const { exportTemplate, importPrefix, importTemplate = defaultImportTemplate } = options;
 		const outputFile = createSourceFile('');
 
 		const importExportMap: ImportExportMap = {};
@@ -111,12 +89,7 @@ const plugin: (
 			};
 		}
 
-		await compileOutputFile(
-			outputFile,
-			options,
-			importExportMap,
-			context.outputStream,
-		);
+		await compileOutputFile(outputFile, options, importExportMap, context.outputStream);
 	},
 };
 
@@ -124,8 +97,8 @@ function compileExportName(exportTemplate: string | undefined, variables: Import
 	return exportTemplate == null
 		? exportTemplate
 		: Object.entries(variables).reduce((result, [key, value]) => {
-			return result.replace(`\${${key}}`, value);
-		}, exportTemplate);
+				return result.replace(`\${${key}}`, value);
+		  }, exportTemplate);
 }
 
 function compileImportName(importTemplate: string, variables: ImportExportVariable): string {
@@ -142,18 +115,19 @@ function compileExportDeclarations(importExportMap: ImportExportMap) {
 	return Object.entries(importExportMap)
 		.sort(([a], [b]) => a.localeCompare(b))
 		.map(([importPath, { exportName, importName }]) =>
-		ts.createExportDeclaration(
-			undefined,
-			undefined,
-			ts.createNamedExports([
-				ts.createExportSpecifier(
-					exportName === importName ? undefined : ts.createIdentifier(importName),
-					ts.createIdentifier(exportName),
-				),
-			]),
-			ts.createStringLiteral(importPath),
-			false
-		));
+			ts.createExportDeclaration(
+				undefined,
+				undefined,
+				ts.createNamedExports([
+					ts.createExportSpecifier(
+						exportName === importName ? undefined : ts.createIdentifier(importName),
+						ts.createIdentifier(exportName),
+					),
+				]),
+				ts.createStringLiteral(importPath),
+				false,
+			),
+		);
 }
 
 function compileSingletonClass(
@@ -168,7 +142,7 @@ function compileSingletonClass(
 				addPrivateReadonlyConstructorProperty(
 					addPrivateSingletonProperties(
 						createSingletonClass(className, options.defaultExport),
-						importExportMap
+						importExportMap,
 					),
 					options,
 				),
@@ -196,10 +170,7 @@ async function compileOutputFile(
 		false,
 	);
 
-	await printSourceFile(
-		addHeaderComment(compiledSourceFile, headerComment),
-		outputStream,
-	);
+	await printSourceFile(addHeaderComment(compiledSourceFile, headerComment), outputStream);
 }
 
 export = plugin;
@@ -217,7 +188,7 @@ function createSingletonClass(className: string | undefined, defaultExport?: boo
 		className == null ? undefined : ts.createIdentifier(className),
 		undefined,
 		undefined,
-		[]
+		[],
 	);
 }
 
@@ -226,44 +197,61 @@ function createImportDeclarations(options: GenerateSingletonClassOptions, import
 		[
 			...(options.additionalImports == null
 				? []
-				: options.additionalImports.map(ai => getModulePath(ai) as ModulePath & { exportName?: string })
-			),
-			...Object.entries(importExportMap)
-				.map(([importPath, { defaultImport, importName, exportName }]) => ({
-					defaultImport,
+				: options.additionalImports.map((ai) => getModulePath(ai) as ModulePath & { exportName?: string })),
+			...Object.entries(importExportMap).map(([importPath, { defaultImport, importName, exportName }]) => ({
+				defaultImport,
+				exportName,
+				importPath,
+				importName,
+			})),
+		]
+			.sort(
+				(
+					{ importPath: a, exportName: a2, importName: a3 },
+					{ importPath: b, exportName: b2, importName: b3 },
+				) => a.localeCompare(b) || (a2 ?? a3).localeCompare(b2 ?? b3),
+			)
+			.map(
+				({
 					exportName,
-					importPath,
 					importName,
-				})),
-		].sort((
-			{ importPath: a, exportName: a2, importName: a3 },
-			{ importPath: b, exportName: b2, importName: b3 }) =>
-				a.localeCompare(b) || (a2 ?? a3).localeCompare(b2 ?? b3)
-		)
-		.map(({ exportName, importName, importPath, defaultImport }: { exportName?: string, importName: string, importPath: string, defaultImport?: boolean }) =>
-			ts.createImportDeclaration(
-				undefined,
-				undefined,
-				ts.createImportClause(
-					defaultImport ? ts.createIdentifier(importName) : importName === 'default' && exportName != null ? ts.createIdentifier(exportName) : undefined,
-					defaultImport ? undefined : ts.createNamedImports([
-						ts.createImportSpecifier(
-							undefined,
-							ts.createIdentifier(importName),
+					importPath,
+					defaultImport,
+				}: {
+					exportName?: string;
+					importName: string;
+					importPath: string;
+					defaultImport?: boolean;
+				}) =>
+					ts.createImportDeclaration(
+						undefined,
+						undefined,
+						ts.createImportClause(
+							defaultImport
+								? ts.createIdentifier(importName)
+								: importName === 'default' && exportName != null
+								? ts.createIdentifier(exportName)
+								: undefined,
+							defaultImport
+								? undefined
+								: ts.createNamedImports([
+										ts.createImportSpecifier(undefined, ts.createIdentifier(importName)),
+								  ]),
+							false,
 						),
-					]),
-					false,
-				),
-				ts.createStringLiteral(importPath),
+						ts.createStringLiteral(importPath),
+					),
 			),
-		),
 	);
 }
 
 /**
  * private _PrivateSingletonVariable: Maybe<SingletonType> = null;
  */
-function addPrivateSingletonProperties(classDecl: ts.ClassDeclaration, importExportMap: ImportExportMap): ts.ClassDeclaration {
+function addPrivateSingletonProperties(
+	classDecl: ts.ClassDeclaration,
+	importExportMap: ImportExportMap,
+): ts.ClassDeclaration {
 	return ts.updateClassDeclaration(
 		classDecl,
 		classDecl.decorators,
@@ -274,24 +262,22 @@ function addPrivateSingletonProperties(classDecl: ts.ClassDeclaration, importExp
 		[
 			...classDecl.members,
 			...Object.values(importExportMap)
-				.sort(({exportName: a}, {exportName: b}) => a.localeCompare(b))
+				.sort(({ exportName: a }, { exportName: b }) => a.localeCompare(b))
 				.reduce((result, { exportName: memberName, importName: memberType }) => {
-				result.push(ts.createProperty(
-					undefined,
-					[ts.createModifier(ts.SyntaxKind.PrivateKeyword)],
-					ts.createIdentifier(`_${memberName}`),
-					undefined,
-					ts.createTypeReferenceNode(
-						ts.createIdentifier('Maybe'),
-						[ts.createTypeReferenceNode(
-							ts.createIdentifier(memberType),
+					result.push(
+						ts.createProperty(
 							undefined,
-						)],
-					),
-					ts.createNull(),
-				));
-				return result;
-			}, [] as ts.PropertyDeclaration[]),
+							[ts.createModifier(ts.SyntaxKind.PrivateKeyword)],
+							ts.createIdentifier(`_${memberName}`),
+							undefined,
+							ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
+								ts.createTypeReferenceNode(ts.createIdentifier(memberType), undefined),
+							]),
+							ts.createNull(),
+						),
+					);
+					return result;
+				}, [] as ts.PropertyDeclaration[]),
 		],
 	);
 }
@@ -299,7 +285,10 @@ function addPrivateSingletonProperties(classDecl: ts.ClassDeclaration, importExp
 /**
  * public readonly propertyName: PropertyType;
  */
-function addPrivateReadonlyConstructorProperty(classDecl: ts.ClassDeclaration, options: GenerateSingletonClassOptions): ts.ClassDeclaration {
+function addPrivateReadonlyConstructorProperty(
+	classDecl: ts.ClassDeclaration,
+	options: GenerateSingletonClassOptions,
+): ts.ClassDeclaration {
 	const { constructorParameters } = options;
 	if (constructorParameters == null) {
 		return classDecl;
@@ -314,21 +303,20 @@ function addPrivateReadonlyConstructorProperty(classDecl: ts.ClassDeclaration, o
 		[
 			...classDecl.members,
 			...constructorParameters
-				.sort(({paramName: a}, {paramName: b}) => a.localeCompare(b))
-				.map(param => ts.createProperty(
-				undefined,
-				[
-					ts.createModifier(ts.SyntaxKind.PrivateKeyword),
-					ts.createModifier(ts.SyntaxKind.ReadonlyKeyword),
-				],
-				ts.createIdentifier(param.paramName),
-				undefined,
-				ts.createTypeReferenceNode(
-					ts.createIdentifier(param.paramType),
-					undefined,
+				.sort(({ paramName: a }, { paramName: b }) => a.localeCompare(b))
+				.map((param) =>
+					ts.createProperty(
+						undefined,
+						[
+							ts.createModifier(ts.SyntaxKind.PrivateKeyword),
+							ts.createModifier(ts.SyntaxKind.ReadonlyKeyword),
+						],
+						ts.createIdentifier(param.paramName),
+						undefined,
+						ts.createTypeReferenceNode(ts.createIdentifier(param.paramType), undefined),
+						undefined,
+					),
 				),
-				undefined,
-			)),
 		],
 	);
 }
@@ -357,27 +345,27 @@ function addPublicConstructor(classDecl: ts.ClassDeclaration, options: GenerateS
 			ts.createConstructor(
 				undefined,
 				[ts.createModifier(ts.SyntaxKind.PublicKeyword)],
-				constructorParameters.map(param => ts.createParameter(
-					undefined,
-					undefined,
-					undefined,
-					ts.createIdentifier(param.paramName),
-					undefined,
-					ts.createTypeReferenceNode(
-						ts.createIdentifier(param.paramType),
+				constructorParameters.map((param) =>
+					ts.createParameter(
+						undefined,
+						undefined,
+						undefined,
+						ts.createIdentifier(param.paramName),
+						undefined,
+						ts.createTypeReferenceNode(ts.createIdentifier(param.paramType), undefined),
 						undefined,
 					),
-					undefined,
-				)),
+				),
 				ts.createBlock(
-					constructorParameters.map(param => ts.createExpressionStatement(ts.createBinary(
-						ts.createPropertyAccess(
-							ts.createThis(),
-							ts.createIdentifier(param.paramName),
+					constructorParameters.map((param) =>
+						ts.createExpressionStatement(
+							ts.createBinary(
+								ts.createPropertyAccess(ts.createThis(), ts.createIdentifier(param.paramName)),
+								ts.createToken(ts.SyntaxKind.EqualsToken),
+								ts.createIdentifier(param.paramName),
+							),
 						),
-						ts.createToken(ts.SyntaxKind.EqualsToken),
-						ts.createIdentifier(param.paramName),
-					))),
+					),
 					true,
 				),
 			),
@@ -416,53 +404,51 @@ function addPublicSingletonGetterProperties(
 						[ts.createModifier(ts.SyntaxKind.PublicKeyword)],
 						ts.createIdentifier(memberName),
 						[],
-						ts.createTypeReferenceNode(
-							ts.createIdentifier(memberType),
-							undefined,
-						),
+						ts.createTypeReferenceNode(ts.createIdentifier(memberType), undefined),
 						ts.createBlock(
 							[
 								ts.createIf(
 									ts.createBinary(
-										ts.createPropertyAccess(
-											ts.createThis(),
-											ts.createIdentifier(`_${memberName}`),
-										),
+										ts.createPropertyAccess(ts.createThis(), ts.createIdentifier(`_${memberName}`)),
 										ts.createToken(ts.SyntaxKind.EqualsEqualsToken),
 										ts.createNull(),
 									),
 									ts.createBlock(
-										[ts.createExpressionStatement(ts.createBinary(
-											ts.createPropertyAccess(
-												ts.createThis(),
-												ts.createIdentifier(`_${memberName}`),
-											),
-											ts.createToken(ts.SyntaxKind.EqualsToken),
-											ts.createNew(
-												ts.createIdentifier(memberType),
-												undefined,
-												constructorParameters == null
-													? undefined
-													: constructorParameters.map(param => ts.createPropertyAccess(
+										[
+											ts.createExpressionStatement(
+												ts.createBinary(
+													ts.createPropertyAccess(
 														ts.createThis(),
-														ts.createIdentifier(param.paramName),
+														ts.createIdentifier(`_${memberName}`),
+													),
+													ts.createToken(ts.SyntaxKind.EqualsToken),
+													ts.createNew(
+														ts.createIdentifier(memberType),
+														undefined,
+														constructorParameters == null
+															? undefined
+															: constructorParameters.map((param) =>
+																	ts.createPropertyAccess(
+																		ts.createThis(),
+																		ts.createIdentifier(param.paramName),
+																	),
+															  ),
 													),
 												),
 											),
-										))],
+										],
 										true,
 									),
 									undefined,
 								),
-								ts.createReturn(ts.createPropertyAccess(
-									ts.createThis(),
-									ts.createIdentifier(`_${memberName}`),
-								)),
+								ts.createReturn(
+									ts.createPropertyAccess(ts.createThis(), ts.createIdentifier(`_${memberName}`)),
+								),
 							],
 							true,
 						),
 					),
-			),
+				),
 		],
 	);
 }

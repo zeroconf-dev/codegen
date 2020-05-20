@@ -4,7 +4,7 @@ import { yellow } from 'cli-color';
 
 interface CodegenContextOptions {
 	inputStream: NodeJS.ReadableStream;
-	logLevel?: Level,
+	logLevel?: Level;
 	outputConfig: OutputConfig;
 	outputStream: NodeJS.WritableStream;
 }
@@ -21,7 +21,7 @@ export class CodegenContext {
 			groupColor: yellow,
 			logFormat: 'TEXT',
 			logLevel: options.logLevel,
-		})
+		});
 		this.inputStream = options.inputStream;
 		this.outputConfig = options.outputConfig;
 		this.outputStream = options.outputStream;

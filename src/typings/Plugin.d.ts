@@ -16,4 +16,4 @@ type CodegenPlugin<TPluginConfig extends {}, TContextPluginExtension = {}> = {
 		visit?: Visitor<ASTKindToNode>;
 	};
 	load?: (context: CodegenContext & TContextPluginExtension) => Promise<void>;
-}
+};

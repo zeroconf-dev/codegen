@@ -268,10 +268,14 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	private readonly fieldDefinitionMap: Map<string, FieldDefinitionNode> = new Map();
 	private readonly fieldFromParentDefinitionMap: Map<string, Map<string, FieldDefinitionNode>> = new Map();
 	private readonly inputObjectDefinitionMap: Map<string, InputObjectTypeDefinitionNodes[]> = new Map();
+	private readonly inputFieldDefinitionMap: Map<string, InputValueDefinitionNode> = new Map();
+	private readonly inputFieldFromParentDefinitionMap: Map<string, Map<string, InputValueDefinitionNode>> = new Map();
 	private readonly interfaceDefinitionMap: Map<string, InterfaceTypeDefinitionNodes[]> = new Map();
+	private readonly mutationDefinitionMap: Map<string, FieldDefinitionNode> = new Map();
 	private readonly objectDefinitionMap: Map<string, ObjectTypeDefinitionNodes[]> = new Map();
-	private readonly unionDefinitionMap: Map<string, UnionTypeDefinitionNodes[]> = new Map();
 	private readonly objectTypeInterfacesMap: Map<string, Set<string>> = new Map();
+	private readonly subscriptionDefinitionMap: Map<string, FieldDefinitionNode> = new Map();
+	private readonly unionDefinitionMap: Map<string, UnionTypeDefinitionNodes[]> = new Map();
 
 	private readonly parentNodeStack: SchemaASTNode[] = [];
 	private parentTypeDefinition: Maybe<ParentTypeDefinitionNodes> = null;
@@ -338,19 +342,60 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 		return objectDefinitionMap;
 	}
 
-
 	public getObjectTypeDefinitions(typeName: string): IterableIterator<ObjectTypeDefinitionNodes> {
 		return this.getObjectTypeDefinitionMap(typeName).values();
 	}
 
 	public getObjectTypeDescription(typeName: string) {
-		return Array.from(
-			pipe(
-				this.getObjectTypeDefinitions(typeName),
-				map(d => d.kind === Kind.OBJECT_TYPE_DEFINITION && d.description?.value),
-				filter(c => typeof c === 'string')
+		return (
+			Array.from(
+				pipe(
+					this.getObjectTypeDefinitions(typeName),
+					map((d) => d.kind === Kind.OBJECT_TYPE_DEFINITION && d.description?.value),
+					filter((c) => typeof c === 'string'),
+				),
 			)
-		).join('\n').trim() || undefined;
+				.join('\n')
+				.trim() || undefined
+		);
+	}
+
+	public getInputObjectTypeDefinitionMap(typeName: string) {
+		const inputObjectDefinitionMap = this.inputObjectDefinitionMap.get(typeName);
+		if (inputObjectDefinitionMap == null) {
+			throw new Error(`No input object type definitions found for type: ${typeName}`);
+		}
+		return inputObjectDefinitionMap;
+	}
+
+	public getInputObjectTypeDefinitions(typeName: string): IterableIterator<InputObjectTypeDefinitionNodes> {
+		return this.getInputObjectTypeDefinitionMap(typeName).values();
+	}
+
+	public getInputObjectTypeDescription(typeName: string) {
+		return (
+			Array.from(
+				pipe(
+					this.getInputObjectTypeDefinitions(typeName),
+					map((d) => d.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION && d.description?.value),
+					filter((c) => typeof c === 'string'),
+				),
+			)
+				.join('\n')
+				.trim() || undefined
+		);
+	}
+
+	public getInputFieldDefinitionMap(parentTypeName: string): ReadonlyMap<string, InputValueDefinitionNode> {
+		const inputFieldDefinitionMap = this.inputFieldFromParentDefinitionMap.get(parentTypeName);
+		if (inputFieldDefinitionMap == null) {
+			throw new Error(`No input field map found for parentType: ${parentTypeName}`);
+		}
+		return inputFieldDefinitionMap;
+	}
+
+	public getInputFieldDefinitions(parentTypeName: string): IterableIterator<InputValueDefinitionNode> {
+		return this.getInputFieldDefinitionMap(parentTypeName).values();
 	}
 
 	public getInterfacesForObjectType(typeName: string): ReadonlySet<string> {
@@ -370,24 +415,39 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 	}
 
 	public getInterfaceTypeDescription(typeName: string) {
-		return Array.from(
-			pipe(
-				this.getInterfaceTypeDefinitions(typeName),
-				map(d => d.kind === Kind.INTERFACE_TYPE_DEFINITION && d.description?.value),
-				filter(c => typeof c === 'string')
+		return (
+			Array.from(
+				pipe(
+					this.getInterfaceTypeDefinitions(typeName),
+					map((d) => d.kind === Kind.INTERFACE_TYPE_DEFINITION && d.description?.value),
+					filter((c) => typeof c === 'string'),
+				),
 			)
-		).join('\n').trim() || undefined;
+				.join('\n')
+				.trim() || undefined
+		);
 	}
 
 	public getTypeDescription(typeName: string) {
-		return this.isInterfaceType(typeName)
-			? this.getInterfaceTypeDescription(typeName)
-			: this.getObjectTypeDescription(typeName);
+		switch (true) {
+			case this.isObjectType(typeName):
+				return this.getObjectTypeDescription(typeName);
+			case this.isInputObjectType(typeName):
+				return this.getInputObjectTypeDescription(typeName);
+			case this.isInterfaceType(typeName):
+				return this.getInterfaceTypeDescription(typeName);
+			default:
+				throw new Error(`Could not determine object type: ${typeName}`);
+		}
 	}
 
 	public isQueryType(typeName: string): boolean {
 		const queryType = this.schema.getQueryType();
 		return (queryType == null && typeName === 'Query') || (queryType != null && queryType.name === typeName);
+	}
+
+	public isOperationType(typeName: string): boolean {
+		return this.isQueryType(typeName) || this.isMutationType(typeName) || this.isSubscriptionType(typeName);
 	}
 
 	public isMutationType(typeName: string): boolean {
@@ -488,6 +548,49 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 				fieldFromParentDefinitions.set(fieldName, node);
 				this.fieldDefinitionMap.set(qualifiedFieldName, node);
 
+				if (this.isMutationType(parentTypeName)) {
+					this.mutationDefinitionMap.set(fieldName, node);
+				}
+
+				if (this.isSubscriptionType(parentTypeName)) {
+					this.subscriptionDefinitionMap.set(fieldName, node);
+				}
+
+				break;
+			}
+
+			case Kind.INPUT_VALUE_DEFINITION: {
+				const fieldName = node.name.value;
+				const parent = this.getParentNode<InputValueDefinitionNode>();
+				if (parent == null) {
+					throw new TypeError(`Invalid type, input value definition: ${fieldName}, without parent`);
+				}
+
+				if (
+					parent.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION ||
+					parent.kind === Kind.INPUT_OBJECT_TYPE_EXTENSION
+				) {
+					const parentTypeName = parent.name.value;
+					const qualifiedFieldName = `${parentTypeName}.${fieldName}`;
+
+					const inputFieldFromParentDefinitions = this.inputFieldFromParentDefinitionMap.get(parentTypeName);
+					if (inputFieldFromParentDefinitions == null) {
+						throw new TypeError(
+							`Invalid type, input value definition: ${qualifiedFieldName}, without input field from parent map.`,
+						);
+					}
+
+					if (
+						this.inputFieldDefinitionMap.has(qualifiedFieldName) ||
+						inputFieldFromParentDefinitions.has(fieldName)
+					) {
+						throw new TypeError(`Invalid type, duplicate input value definition: ${qualifiedFieldName}`);
+					}
+
+					this.inputFieldDefinitionMap.set(qualifiedFieldName, node);
+					inputFieldFromParentDefinitions.set(fieldName, node);
+				}
+
 				break;
 			}
 
@@ -499,9 +602,9 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 				inputObjectDefinitions.push(node);
 				this.inputObjectDefinitionMap.set(typeName, inputObjectDefinitions);
 
-				this.fieldFromParentDefinitionMap.set(
+				this.inputFieldFromParentDefinitionMap.set(
 					typeName,
-					this.fieldFromParentDefinitionMap.get(typeName) ?? new Map(),
+					this.inputFieldFromParentDefinitionMap.get(typeName) ?? new Map(),
 				);
 
 				this.parentTypeDefinition = node;
@@ -535,20 +638,22 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 			case Kind.OBJECT_TYPE_EXTENSION: {
 				const typeName = node.name.value;
 
-				const objectDefinitions = this.objectDefinitionMap.get(typeName) ?? [];
-				objectDefinitions.push(node);
-				this.objectDefinitionMap.set(typeName, objectDefinitions);
+				if (!this.isMutationType(typeName) && !this.isSubscriptionType(typeName)) {
+					const objectDefinitions = this.objectDefinitionMap.get(typeName) ?? [];
+					objectDefinitions.push(node);
+					this.objectDefinitionMap.set(typeName, objectDefinitions);
+
+					if (node.interfaces != null) {
+						const interfaces = this.objectTypeInterfacesMap.get(typeName) ?? new Set();
+						node.interfaces.forEach((iface) => interfaces.add(iface.name.value));
+						this.objectTypeInterfacesMap.set(typeName, interfaces);
+					}
+				}
 
 				this.fieldFromParentDefinitionMap.set(
 					typeName,
 					this.fieldFromParentDefinitionMap.get(typeName) ?? new Map(),
 				);
-
-				if (node.interfaces != null) {
-					const interfaces = this.objectTypeInterfacesMap.get(typeName) ?? new Set();
-					node.interfaces.forEach((iface) => interfaces.add(iface.name.value));
-					this.objectTypeInterfacesMap.set(typeName, interfaces);
-				}
 
 				this.parentTypeDefinition = node;
 				break;

@@ -1,7 +1,17 @@
+"""
+Forum
+"""
 type Forum implements Node {
+    "Forum ID, uniquely identifies this forum in the graph."
     id: ID!
+
+    "Unique forum name within this category."
     name: String!
+
+    "Category this forum lives within."
     category: Category! @resolve
+
+    "Person who as created this forum."
     creator: Person!
 }
 

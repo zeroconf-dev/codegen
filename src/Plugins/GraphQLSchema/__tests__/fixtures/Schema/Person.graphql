@@ -1,3 +1,9 @@
+"""
+Represents a person with a name.
+Useful when the underlying entity might not be there anymore,
+e.g. if a Profile has authored something, but the profile is now deleted.
+"""
 interface Person {
+	"""Name of the person."""
 	name: String!
 }

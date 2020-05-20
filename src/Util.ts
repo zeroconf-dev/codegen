@@ -5,7 +5,7 @@ export interface ModulePath {
 	importPath: string;
 }
 
-export const filterNonNull = <T>(arr: Maybe<T>[]): T[] => arr.filter(e => e != null) as T[];
+export const filterNonNull = <T>(arr: Maybe<T>[]): T[] => arr.filter((e) => e != null) as T[];
 
 export function getModulePath(modulePathStr: string): ModulePath {
 	const [importPath, importNameRaw] = modulePathStr.split('#');
@@ -42,7 +42,9 @@ export function map<T, R>(fn: (val: T) => R): (iter: Iterator<T, void, undefined
 	};
 }
 
-export function filter<T>(fn: (val: T) => boolean): (iter: Iterator<T, void, undefined>) => Generator<T, void, undefined> {
+export function filter<T>(
+	fn: (val: T) => boolean,
+): (iter: Iterator<T, void, undefined>) => Generator<T, void, undefined> {
 	return function* (iter: Iterator<T, void, undefined>): Generator<T, void, undefined> {
 		let res: IteratorResult<T>;
 		while (true) {
@@ -57,7 +59,9 @@ export function filter<T>(fn: (val: T) => boolean): (iter: Iterator<T, void, und
 	};
 }
 
-export function flatMap<T, R = T>(fn?: (val: T) => R): (iter: Iterator<Iterable<T>, void, undefined>) => Generator<R, void, undefined> {
+export function flatMap<T, R = T>(
+	fn?: (val: T) => R,
+): (iter: Iterator<Iterable<T>, void, undefined>) => Generator<R, void, undefined> {
 	return function* (iter: Iterator<Iterable<T>, void, undefined>): Generator<R, void, undefined> {
 		let res: IteratorResult<Iterable<T>>;
 		while (true) {
@@ -69,7 +73,7 @@ export function flatMap<T, R = T>(fn?: (val: T) => R): (iter: Iterator<Iterable<
 				yield (fn == null ? value : fn(value)) as R;
 			}
 		}
-	}
+	};
 }
 
 export function just<T, R>(value: R): (iter: Iterator<T, void, undefined>) => Generator<T | R, void, undefined> {
@@ -83,7 +87,7 @@ export function just<T, R>(value: R): (iter: Iterator<T, void, undefined>) => Ge
 			}
 			yield res.value;
 		}
-	}
+	};
 }
 
 export const not = <T>(predicate: (val: T) => boolean) => (val: T) => !predicate(val);

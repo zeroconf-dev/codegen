@@ -5,7 +5,9 @@ type Post implements Node {
 }
 
 type PostEdge implements Edge {
+    """Cursor identifying this edge."""
     cursor: String!
+    """Forum post node of this connection edge."""
     node: Post
 }
 

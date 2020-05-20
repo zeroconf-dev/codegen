@@ -1,8 +1,8 @@
-import * as ts from 'typescript';
-import { basename } from 'path';
-import { writeFile as writeFileCallback } from 'fs';
-import { promisify } from 'util';
 import { ModulePath } from '@zeroconf/codegen/Util';
+import { writeFile as writeFileCallback } from 'fs';
+import { basename } from 'path';
+import * as ts from 'typescript';
+import { promisify } from 'util';
 
 const writeFile = promisify(writeFileCallback);
 
@@ -11,7 +11,12 @@ export function createSourceFile(outputPath: string) {
 	return ts.createSourceFile(fileName, '', ts.ScriptTarget.Latest);
 }
 
-export function createImportDeclarationFromModulePath({ defaultImport, exportName, importName, importPath }: ModulePath) {
+export function createImportDeclarationFromModulePath({
+	defaultImport,
+	exportName,
+	importName,
+	importPath,
+}: ModulePath) {
 	return ts.createImportDeclaration(
 		undefined,
 		undefined,
@@ -51,18 +56,23 @@ export function printSourceFile(sourceFile: ts.SourceFile, outputStream?: NodeJS
 
 export function addHeaderComment(sourceFile: ts.SourceFile, headerComment: string) {
 	if (sourceFile.statements.length === 0) {
-		const compiledHeader = headerComment.split('\n').map(comment => `// ${comment}`).join('\n');
+		const compiledHeader = headerComment
+			.split('\n')
+			.map((comment) => `// ${comment}`)
+			.join('\n');
 		sourceFile = ts.updateSourceFile(
 			sourceFile,
 			compiledHeader,
-			ts.createTextChangeRange(
-				ts.createTextSpan(0, 0),
-				compiledHeader.length,
-			),
+			ts.createTextChangeRange(ts.createTextSpan(0, 0), compiledHeader.length),
 		);
 	} else {
-		headerComment.split('\n').forEach(comment => {
-			ts.addSyntheticLeadingComment(sourceFile.statements[0], ts.SyntaxKind.SingleLineCommentTrivia, ` ${comment}`, true);
+		headerComment.split('\n').forEach((comment) => {
+			ts.addSyntheticLeadingComment(
+				sourceFile.statements[0],
+				ts.SyntaxKind.SingleLineCommentTrivia,
+				` ${comment}`,
+				true,
+			);
 		});
 	}
 	return sourceFile;
@@ -77,8 +87,11 @@ export function addNodeCommentBlock<TNode extends ts.Node>(comment: Maybe<string
 	ts.addSyntheticLeadingComment(
 		node,
 		ts.SyntaxKind.MultiLineCommentTrivia,
-		`*\n${trimmed.split('\n').map(s => ` * ${s}`).join('\n')}\n *`,
-		true
+		`*\n${trimmed
+			.split('\n')
+			.map((s) => ` * ${s}`)
+			.join('\n')}\n *`,
+		true,
 	);
 
 	return node;

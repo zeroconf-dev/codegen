@@ -3,7 +3,9 @@
 	"licenser.license": "BSD3",
 	"licenser.projectName": "@zeroconf/codegen-ts",
 	"cSpell.words": [
+		"TAST",
 		"cosmiconfig",
+		"iface",
 		"zeroconf"
 	],
 }

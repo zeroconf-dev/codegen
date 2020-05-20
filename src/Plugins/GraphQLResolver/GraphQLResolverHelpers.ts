@@ -1,8 +1,8 @@
+import { GenerateSchemaContext } from '@zeroconf/codegen/GraphQL';
+import { addNodeCommentBlock, createImportDeclarationFromModulePath } from '@zeroconf/codegen/Typescript';
+import { assertNever, capitalize, filter, flatMap, just, map, ModulePath, not, pipe } from '@zeroconf/codegen/Util';
+import { FieldDefinitionNode, Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode } from 'graphql';
 import * as ts from 'typescript';
-import { ModulePath, capitalize, pipe, map, assertNever, filter, flatMap, just, not } from '@zeroconf/codegen/Util';
-import { createImportDeclarationFromModulePath, addNodeCommentBlock } from '@zeroconf/codegen/Typescript';
-import { GenerateSchemaContext, ObjectTypeDefinitionNodes, InterfaceTypeDefinitionNodes } from '@zeroconf/codegen/GraphQL';
-import { FieldDefinitionNode, NamedTypeNode, ListTypeNode, NonNullTypeNode, Kind } from 'graphql';
 
 export const generateGraphQLResolveInfoImportStatement = () =>
 	ts.createImportDeclaration(
@@ -537,19 +537,21 @@ export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) 
 		ts.createIdentifier('ResponseTypeMap'),
 		undefined,
 		undefined,
-		[...pipe(
-			objectTypes,
-			filter((typeName) => !relayTypes.includes(typeName)),
-			map((typeName) =>
-				ts.createPropertySignature(
-					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-					ts.createIdentifier(typeName),
-					undefined,
-					ts.createTypeReferenceNode(ts.createIdentifier(`${typeName}Response`), undefined),
-					undefined,
+		[
+			...pipe(
+				objectTypes,
+				filter((typeName) => !relayTypes.includes(typeName)),
+				map((typeName) =>
+					ts.createPropertySignature(
+						[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+						ts.createIdentifier(typeName),
+						undefined,
+						ts.createTypeReferenceNode(ts.createIdentifier(`${typeName}Response`), undefined),
+						undefined,
+					),
 				),
 			),
-		)],
+		],
 	);
 
 /**
@@ -1284,15 +1286,20 @@ const createTypeFromField = (field: Field | FieldType): ts.TypeNode =>
 		: createMaybeType(createListType(createTypeFromField(field.listOf)), field.nullable);
 
 type CreateTypeFromNode = (node: NamedTypeNode | ListTypeNode | NonNullTypeNode) => ts.TypeNode;
-type PrivateCreateTypeFromNode = (node: NamedTypeNode | ListTypeNode | NonNullTypeNode, nullable: boolean) => ts.TypeNode
-const createTypeFromNode: CreateTypeFromNode =
-	(node: NamedTypeNode | ListTypeNode | NonNullTypeNode, nullable = true): ts.TypeNode => {
+type PrivateCreateTypeFromNode = (
+	node: NamedTypeNode | ListTypeNode | NonNullTypeNode,
+	nullable: boolean,
+) => ts.TypeNode;
+const createTypeFromNode: CreateTypeFromNode = (
+	node: NamedTypeNode | ListTypeNode | NonNullTypeNode,
+	nullable = true,
+): ts.TypeNode => {
 	switch (node.kind) {
 		case Kind.NAMED_TYPE:
 			return createMaybeType(
-				isScalarType(node.name.value)
-					? createScalarType(node.name.value)
-					: createNamedType(node.name.value), nullable);
+				isScalarType(node.name.value) ? createScalarType(node.name.value) : createNamedType(node.name.value),
+				nullable,
+			);
 		case Kind.LIST_TYPE:
 			return createListType(createTypeFromNode(node.type));
 		case Kind.NON_NULL_TYPE:
@@ -1333,10 +1340,7 @@ const resolveRelayInterfaceTypeArgs = (interfaceName: string, typeName: string):
  * }
  * ````
  */
-export const generateObjectType = (
-	context: GenerateSchemaContext,
-	typeName: string,
-) => {
+export const generateObjectType = (context: GenerateSchemaContext, typeName: string) => {
 	const interfaces = context.typeInfo.getInterfacesForObjectType(typeName);
 	const description = context.typeInfo.getTypeDescription(typeName);
 
@@ -1375,7 +1379,7 @@ export const generateObjectType = (
 								ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
 								undefined,
 							),
-						]),
+					  ]),
 				...pipe(
 					context.typeInfo.getFieldDefinitions(typeName),
 					filter(not(isResolver)),
@@ -1416,16 +1420,19 @@ export const generateObjectTypeFieldResolvers = (
 				undefined,
 				field.arguments == null || field.arguments.length === 0
 					? ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword)
-					: ts.createTypeLiteralNode(field.arguments.map((arg) =>
-						ts.createPropertySignature(
-							undefined,
-							ts.createIdentifier(arg.name.value),
-							undefined,
-							createTypeFromNode(arg.type),
-							undefined,
-						),
-						undefined,
-					)),
+					: ts.createTypeLiteralNode(
+							field.arguments.map(
+								(arg) =>
+									ts.createPropertySignature(
+										[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+										ts.createIdentifier(arg.name.value),
+										undefined,
+										createTypeFromNode(arg.type),
+										undefined,
+									),
+								undefined,
+							),
+					  ),
 			),
 			ts.createTypeAliasDeclaration(
 				undefined,
@@ -1434,7 +1441,10 @@ export const generateObjectTypeFieldResolvers = (
 				undefined,
 				ts.createTypeReferenceNode(ts.createIdentifier('ResolverFn'), [
 					createTypeFromNode(field.type),
-					ts.createTypeReferenceNode(ts.createIdentifier(context.typeInfo.isQueryType(typeName) ? 'Root' : typeName), undefined),
+					ts.createTypeReferenceNode(
+						ts.createIdentifier(context.typeInfo.isOperationType(typeName) ? 'Root' : typeName),
+						undefined,
+					),
 					ts.createTypeReferenceNode(ts.createIdentifier('Context'), undefined),
 					ts.createTypeReferenceNode(
 						ts.createIdentifier(capitalize(typeName, field.name.value, 'Args')),
@@ -1451,24 +1461,61 @@ export const generateObjectTypeFieldResolvers = (
 				ts.createIdentifier(capitalize(typeName, 'Resolvers')),
 				undefined,
 				undefined,
-				[...pipe(
-					context.typeInfo.getFieldDefinitions(typeName),
-					filter(isResolver),
-					map((field) =>
-						ts.createPropertySignature(
-							[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-							ts.createIdentifier(field.name.value),
-							undefined,
-							ts.createTypeReferenceNode(
-								ts.createIdentifier(capitalize(typeName, field.name.value, 'Resolver')),
+				[
+					...pipe(
+						context.typeInfo.getFieldDefinitions(typeName),
+						filter(isResolver),
+						map((field) =>
+							ts.createPropertySignature(
+								[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+								ts.createIdentifier(field.name.value),
+								undefined,
+								ts.createTypeReferenceNode(
+									ts.createIdentifier(capitalize(typeName, field.name.value, 'Resolver')),
+									undefined,
+								),
 								undefined,
 							),
-							undefined,
 						),
 					),
-				)],
+				],
 			),
 		),
+	);
+
+export const generateInputObjectType = (context: GenerateSchemaContext, typeName: string) =>
+	addNodeCommentBlock(
+		context.typeInfo.getInputObjectTypeDescription(typeName),
+		ts.createInterfaceDeclaration(
+			undefined,
+			[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
+			ts.createIdentifier(typeName),
+			undefined,
+			undefined,
+			[
+				...pipe(
+					context.typeInfo.getInputFieldDefinitions(typeName),
+					map((field) =>
+						addNodeCommentBlock(
+							field.description?.value,
+							ts.createPropertySignature(
+								[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+								ts.createIdentifier(field.name.value),
+								undefined,
+								createTypeFromNode(field.type),
+								undefined,
+							),
+						),
+					),
+				),
+			],
+		),
+	);
+
+export const generateInputObjectTypes = (context: GenerateSchemaContext) =>
+	pipe(
+		context.typeInfo.inputObjectDefinitions.keys(),
+		map((typeName) => generateInputObjectType(context, typeName)),
 	);
 
 export const generateInterfaceOutputTypes = (context: GenerateSchemaContext) =>
@@ -1499,19 +1546,10 @@ const generateObjectResponseType = (typeName: string) =>
 		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
 		ts.createIdentifier(capitalize(typeName, 'Response')),
 		undefined,
-		ts.createTypeReferenceNode(
-			ts.createIdentifier('ResponseType'),
-			[
-				ts.createTypeReferenceNode(
-					ts.createIdentifier(typeName),
-					undefined,
-				),
-				ts.createTypeReferenceNode(
-					ts.createIdentifier(capitalize(typeName, 'Resolvers')),
-					undefined,
-				),
-			],
-		)
+		ts.createTypeReferenceNode(ts.createIdentifier('ResponseType'), [
+			ts.createTypeReferenceNode(ts.createIdentifier(typeName), undefined),
+			ts.createTypeReferenceNode(ts.createIdentifier(capitalize(typeName, 'Resolvers')), undefined),
+		]),
 	);
 
 export const generateObjectResponseTypes = (context: GenerateSchemaContext) =>
