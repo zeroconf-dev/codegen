@@ -12,7 +12,7 @@
 			"cwd": "${workspaceFolder}",
 			"args": [
 				"--transpile-only",
-				"src/Cli.ts"
+				"src/Runner.ts"
 			],
 			"sourceMaps": true,
 			"smartStep": true,
