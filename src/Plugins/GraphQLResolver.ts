@@ -47,7 +47,7 @@ interface GenerateOptions {
 	root?: string;
 }
 
-const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtension> = {
+export const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtension> = {
 	config: async (config) => {
 		if (!isMaybeString(config.headerComment)) {
 			throw new Error(`Expected 'headerComment' to be a string, got: ${typeof config.headerComment}`);
@@ -67,11 +67,11 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 		const { headerComment = defaultHeaderComment } = config;
 		const { schemaContext } = context.graphql;
 
-		let outputFile = createSourceFile('');
+		let outputFile = createSourceFile();
 
 		schemaContext.visitSchema({});
 
-		outputFile = ts.updateSourceFileNode(outputFile, [
+		outputFile = ts.factory.updateSourceFile(outputFile, [
 			...outputFile.statements,
 
 			// Built-in types and utilities.
@@ -121,5 +121,3 @@ const plugin: CodegenPlugin<GenerateOptions, GraphQLSchemaCodegenContextExtensio
 		return printSourceFile(addHeaderComment(outputFile, headerComment), context.outputStream);
 	},
 };
-
-export = plugin;

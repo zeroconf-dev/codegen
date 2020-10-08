@@ -1,14 +1,12 @@
 import { ModulePath } from '@zeroconf/codegen/Util';
 import { writeFile as writeFileCallback } from 'fs';
-import { basename } from 'path';
 import * as ts from 'typescript';
 import { promisify } from 'util';
 
 const writeFile = promisify(writeFileCallback);
 
-export function createSourceFile(outputPath: string) {
-	const fileName = basename(outputPath);
-	return ts.createSourceFile(fileName, '', ts.ScriptTarget.Latest);
+export function createSourceFile() {
+	return ts.factory.createSourceFile([], ts.factory.createToken(ts.SyntaxKind.EndOfFileToken), ts.NodeFlags.None);
 }
 
 export function createImportDeclarationFromModulePath({
@@ -17,21 +15,21 @@ export function createImportDeclarationFromModulePath({
 	importName,
 	importPath,
 }: ModulePath) {
-	return ts.createImportDeclaration(
+	return ts.factory.createImportDeclaration(
 		undefined,
 		undefined,
-		ts.createImportClause(
+		ts.factory.createImportClause(
+			false,
 			defaultImport
-				? ts.createIdentifier(importName)
+				? ts.factory.createIdentifier(importName)
 				: importName === 'default' && exportName != null
-				? ts.createIdentifier(exportName)
+				? ts.factory.createIdentifier(exportName)
 				: undefined,
 			defaultImport
 				? undefined
-				: ts.createNamedImports([ts.createImportSpecifier(undefined, ts.createIdentifier(importName))]),
-			false,
+				: ts.factory.createNamedImports([ts.factory.createImportSpecifier(undefined, ts.factory.createIdentifier(importName))]),
 		),
-		ts.createStringLiteral(importPath),
+		ts.factory.createStringLiteral(importPath),
 	);
 }
 

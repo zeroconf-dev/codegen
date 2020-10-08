@@ -5,15 +5,17 @@ import { FieldDefinitionNode, Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode
 import * as ts from 'typescript';
 
 export const generateGraphQLResolveInfoImportStatement = () =>
-	ts.createImportDeclaration(
+	ts.factory.createImportDeclaration(
 		undefined,
 		undefined,
-		ts.createImportClause(
+		ts.factory.createImportClause(
+			true,
 			undefined,
-			ts.createNamedImports([ts.createImportSpecifier(undefined, ts.createIdentifier('GraphQLResolveInfo'))]),
-			false,
+			ts.factory.createNamedImports([
+				ts.factory.createImportSpecifier(undefined, ts.factory.createIdentifier('GraphQLResolveInfo')),
+			]),
 		),
-		ts.createStringLiteral('graphql'),
+		ts.factory.createStringLiteral('graphql'),
 	);
 
 /**
@@ -28,12 +30,12 @@ export const generateGraphQLResolveInfoImportStatement = () =>
  */
 export const generateRootType = (modulePath?: Maybe<ModulePath>) =>
 	modulePath == null
-		? ts.createTypeAliasDeclaration(
+		? ts.factory.createTypeAliasDeclaration(
 				undefined,
-				undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-				ts.createIdentifier('Root'),
+				undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.factory.createIdentifier('Root'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
 		  )
 		: createImportDeclarationFromModulePath(modulePath);
 
@@ -49,12 +51,12 @@ export const generateRootType = (modulePath?: Maybe<ModulePath>) =>
  */
 export const generateContextType = (modulePath?: Maybe<ModulePath>) =>
 	modulePath == null
-		? ts.createTypeAliasDeclaration(
+		? ts.factory.createTypeAliasDeclaration(
 				undefined,
-				undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-				ts.createIdentifier('Context'),
+				undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.factory.createIdentifier('Context'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
 		  )
 		: createImportDeclarationFromModulePath(modulePath);
 
@@ -81,19 +83,18 @@ const scalars = {
  * }
  */
 export const generateScalarsMapInterface = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('Scalars'),
+		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('Scalars'),
 		undefined,
 		undefined,
 		Object.entries(scalars).map(([key, val]) =>
-			ts.createPropertySignature(
+			ts.factory.createPropertySignature(
 				undefined,
-				ts.createIdentifier(key),
+				ts.factory.createIdentifier(key),
 				undefined,
-				ts.createKeywordTypeNode(val),
-				undefined,
+				ts.factory.createKeywordTypeNode(val),
 			),
 		),
 	);
@@ -105,15 +106,15 @@ export const generateScalarsMapInterface = () =>
  * type ResolverResult<T> = T | Promise<T>;
  */
 export const generateResolverResultUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('ResolverResult'),
-		[ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined)],
-		ts.createUnionTypeNode([
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-			ts.createTypeReferenceNode(ts.createIdentifier('Promise'), [
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+		ts.factory.createIdentifier('ResolverResult'),
+		[ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T'))],
+		ts.factory.createUnionTypeNode([
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Promise'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			]),
 		]),
 	);
@@ -127,12 +128,15 @@ type Maybe<T> = T | null;
  * type Maybe<T> = T | null;
  */
 export const generateMaybeUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
-		undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('Maybe'),
-		[ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined)],
-		ts.createUnionTypeNode([ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined), ts.createNull()]),
+		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('Maybe'),
+		[ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T'))],
+		ts.factory.createUnionTypeNode([
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createLiteralTypeNode(ts.factory.createNull()),
+		]),
 	);
 
 /**
@@ -156,295 +160,275 @@ export const generateMaybeUtilityType = () =>
  * withoutArgs: (context, parent, info) => res
  */
 export const generateResolversFnUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
-		undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('ResolverFn'),
+		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('ResolverFn'),
 		[
-			ts.createTypeParameterDeclaration(ts.createIdentifier('TResult'), undefined, undefined),
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TParent'),
+			ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('TResult')),
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TParent'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
 			),
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TContext'),
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TContext'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('Context'), undefined),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Context')),
 			),
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TArgs'),
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TArgs'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
 			),
 		],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('TContext'), undefined),
-			ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-			ts.createConditionalTypeNode(
-				ts.createTypeReferenceNode(ts.createIdentifier('TParent'), undefined),
-				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-				ts.createConditionalTypeNode(
-					ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-					ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-					ts.createFunctionTypeNode(
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TContext')),
+			ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+			ts.factory.createConditionalTypeNode(
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TParent')),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+				ts.factory.createConditionalTypeNode(
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
-					ts.createFunctionTypeNode(
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('args'),
+								ts.factory.createIdentifier('args'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
 				),
-				ts.createConditionalTypeNode(
-					ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-					ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-					ts.createFunctionTypeNode(
+				ts.factory.createConditionalTypeNode(
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('parent'),
+								ts.factory.createIdentifier('parent'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TParent'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TParent')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
-					ts.createFunctionTypeNode(
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('parent'),
+								ts.factory.createIdentifier('parent'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TParent'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TParent')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('args'),
+								ts.factory.createIdentifier('args'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
 				),
 			),
-			ts.createConditionalTypeNode(
-				ts.createTypeReferenceNode(ts.createIdentifier('TParent'), undefined),
-				ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-				ts.createConditionalTypeNode(
-					ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-					ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-					ts.createFunctionTypeNode(
+			ts.factory.createConditionalTypeNode(
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TParent')),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+				ts.factory.createConditionalTypeNode(
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('context'),
+								ts.factory.createIdentifier('context'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TContext'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TContext')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
-					ts.createFunctionTypeNode(
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('context'),
+								ts.factory.createIdentifier('context'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TContext'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TContext')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('args'),
+								ts.factory.createIdentifier('args'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
 				),
-				ts.createConditionalTypeNode(
-					ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-					ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-					ts.createFunctionTypeNode(
+				ts.factory.createConditionalTypeNode(
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('context'),
+								ts.factory.createIdentifier('context'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TContext'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TContext')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('parent'),
+								ts.factory.createIdentifier('parent'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TParent'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TParent')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
-					ts.createFunctionTypeNode(
+					ts.factory.createFunctionTypeNode(
 						undefined,
 						[
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('context'),
+								ts.factory.createIdentifier('context'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TContext'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TContext')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('parent'),
+								ts.factory.createIdentifier('parent'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TParent'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TParent')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('args'),
+								ts.factory.createIdentifier('args'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
 							),
-							ts.createParameter(
+							ts.factory.createParameterDeclaration(
 								undefined,
 								undefined,
 								undefined,
-								ts.createIdentifier('info'),
+								ts.factory.createIdentifier('info'),
 								undefined,
-								ts.createTypeReferenceNode(ts.createIdentifier('GraphQLResolveInfo'), undefined),
-								undefined,
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('GraphQLResolveInfo')),
 							),
 						],
-						ts.createTypeReferenceNode(ts.createIdentifier('ResolverResult'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TResult'), undefined),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverResult'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResult')),
 						]),
 					),
 				),
@@ -466,20 +450,20 @@ export const generateResolversFnUtilityType = () =>
  * type ProfileResult = UnwrapPromise<Profile>
  */
 export const generateUnwrapPromiseUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('UnwrapPromise'),
-		[ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined)],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-			ts.createTypeReferenceNode(ts.createIdentifier('Promise'), [
-				ts.createInferTypeNode(
-					ts.createTypeParameterDeclaration(ts.createIdentifier('R'), undefined, undefined),
+		ts.factory.createIdentifier('UnwrapPromise'),
+		[ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T'))],
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Promise'), [
+				ts.factory.createInferTypeNode(
+					ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('R')),
 				),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('R'), undefined),
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('R')),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 		),
 	);
 
@@ -493,35 +477,34 @@ export const generateUnwrapPromiseUtilityType = () =>
  *         : UnwrapPromise<T>
  */
 export const generateResolverReturnTypeUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('ResolverReturnType'),
-		[ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined)],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-			ts.createFunctionTypeNode(
+		ts.factory.createIdentifier('ResolverReturnType'),
+		[ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T'))],
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createFunctionTypeNode(
 				undefined,
 				[
-					ts.createParameter(
+					ts.factory.createParameterDeclaration(
 						undefined,
 						undefined,
-						ts.createToken(ts.SyntaxKind.DotDotDotToken),
-						ts.createIdentifier('args'),
+						ts.factory.createToken(ts.SyntaxKind.DotDotDotToken),
+						ts.factory.createIdentifier('args'),
 						undefined,
-						ts.createArrayTypeNode(ts.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)),
-						undefined,
+						ts.factory.createArrayTypeNode(ts.factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword)),
 					),
 				],
-				ts.createInferTypeNode(
-					ts.createTypeParameterDeclaration(ts.createIdentifier('R'), undefined, undefined),
+				ts.factory.createInferTypeNode(
+					ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('R')),
 				),
 			),
-			ts.createTypeReferenceNode(ts.createIdentifier('UnwrapPromise'), [
-				ts.createTypeReferenceNode(ts.createIdentifier('R'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('UnwrapPromise'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('R')),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('UnwrapPromise'), [
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('UnwrapPromise'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			]),
 		),
 	);
@@ -531,10 +514,10 @@ export const generateResolverReturnTypeUtilityType = () =>
  * to the actual GraphQL response type.
  */
 export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		undefined, // [ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('ResponseTypeMap'),
+		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('ResponseTypeMap'),
 		undefined,
 		undefined,
 		[
@@ -542,12 +525,11 @@ export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) 
 				objectTypes,
 				filter((typeName) => !relayTypes.includes(typeName)),
 				map((typeName) =>
-					ts.createPropertySignature(
-						[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-						ts.createIdentifier(typeName),
+					ts.factory.createPropertySignature(
+						[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+						ts.factory.createIdentifier(typeName),
 						undefined,
-						ts.createTypeReferenceNode(ts.createIdentifier(`${typeName}Response`), undefined),
-						undefined,
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(`${typeName}Response`)),
 					),
 				),
 			),
@@ -562,21 +544,21 @@ export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) 
  * type PreserveMaybe<T, U> = U extends null ? Maybe<T> : T;
  */
 export const generatePreserveMaybeUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('PreserveMaybe'),
+		ts.factory.createIdentifier('PreserveMaybe'),
 		[
-			ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined),
-			ts.createTypeParameterDeclaration(ts.createIdentifier('U'), undefined, undefined),
+			ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T')),
+			ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('U')),
 		],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('U'), undefined),
-			ts.createNull(),
-			ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('U')),
+			ts.factory.createLiteralTypeNode(ts.factory.createNull()),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 		),
 	);
 
@@ -598,25 +580,27 @@ export const generatePreserveMaybeUtilityType = () =>
  * type ViewerResponse = ExtractResponseTypeLookup<'Viewer'>;
  */
 export const generateExtractResponseTypeLookupUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('ExtractResponseTypeLookup'),
+		ts.factory.createIdentifier('ExtractResponseTypeLookup'),
 		[
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('T'),
-				ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
-				undefined,
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('T'),
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
 			),
 		],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-			ts.createTypeOperatorNode(ts.createTypeReferenceNode(ts.createIdentifier('ResponseTypeMap'), undefined)),
-			ts.createIndexedAccessTypeNode(
-				ts.createTypeReferenceNode(ts.createIdentifier('ResponseTypeMap'), undefined),
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createTypeOperatorNode(
+				ts.SyntaxKind.KeyOfKeyword,
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeMap'))
 			),
-			ts.createKeywordTypeNode(ts.SyntaxKind.NeverKeyword),
+			ts.factory.createIndexedAccessTypeNode(
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeMap')),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			),
+			ts.factory.createKeywordTypeNode(ts.SyntaxKind.NeverKeyword),
 		),
 	);
 
@@ -635,36 +619,35 @@ export const generateExtractResponseTypeLookupUtilityType = () =>
  * type ViewerResponse = ExtractResponseType<Viewer>
  */
 export const generateExtractResponseTypeUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('ExtractResponseType'),
-		[ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined)],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-			ts.createTypeLiteralNode([
-				ts.createPropertySignature(
-					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-					ts.createStringLiteral(' $__typename'),
+		ts.factory.createIdentifier('ExtractResponseType'),
+		[ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T'))],
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createTypeLiteralNode([
+				ts.factory.createPropertySignature(
+					[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+					ts.factory.createStringLiteral(' $__typename'),
 					undefined,
-					ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
-					undefined,
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
 				),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('PreserveMaybe'), [
-				ts.createTypeReferenceNode(ts.createIdentifier('ExtractResponseTypeLookup'), [
-					ts.createTypeReferenceNode(ts.createIdentifier('NonNullable'), [
-						ts.createIndexedAccessTypeNode(
-							ts.createTypeReferenceNode(ts.createIdentifier('Required'), [
-								ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('PreserveMaybe'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ExtractResponseTypeLookup'), [
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('NonNullable'), [
+						ts.factory.createIndexedAccessTypeNode(
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Required'), [
+								ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 							]),
-							ts.createLiteralTypeNode(ts.createStringLiteral(' $__typename')),
+							ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(' $__typename')),
 						),
 					]),
 				]),
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 		),
 	);
 
@@ -685,31 +668,31 @@ export const generateExtractResponseTypeUtilityType = () =>
  * type MaybeViewerResponseArray = ResponseTypeLookup<Maybe<Viewer>[]>;
  */
 export const generateResponseTypeLookupUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('ResponseTypeLookup'),
-		[ts.createTypeParameterDeclaration(ts.createIdentifier('T'), undefined, undefined)],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-			ts.createTypeReferenceNode(ts.createIdentifier('ReadonlyArray'), [
-				ts.createInferTypeNode(
-					ts.createTypeParameterDeclaration(ts.createIdentifier('E'), undefined, undefined),
+		ts.factory.createIdentifier('ResponseTypeLookup'),
+		[ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('T'))],
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ReadonlyArray'), [
+				ts.factory.createInferTypeNode(
+					ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('E')),
 				),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('PreserveMaybe'), [
-				ts.createTypeOperatorNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('PreserveMaybe'), [
+				ts.factory.createTypeOperatorNode(
 					ts.SyntaxKind.ReadonlyKeyword,
-					ts.createArrayTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('ExtractResponseType'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('E'), undefined),
+					ts.factory.createArrayTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ExtractResponseType'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('E')),
 						]),
 					),
 				),
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			]),
-			ts.createTypeReferenceNode(ts.createIdentifier('ExtractResponseType'), [
-				ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ExtractResponseType'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			]),
 		),
 	);
@@ -729,76 +712,77 @@ export const generateResponseTypeLookupUtilityType = () =>
  * type ViewerResponse = ResponseType<Viewer, ViewerResolvers>
  */
 export const generateResponseTypeUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
-		ts.createIdentifier('ResponseType'),
+		ts.factory.createIdentifier('ResponseType'),
 		[
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('T'),
-				ts.createTypeLiteralNode([
-					ts.createPropertySignature(
-						[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-						ts.createStringLiteral(' $__typename'),
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('T'),
+				ts.factory.createTypeLiteralNode([
+					ts.factory.createPropertySignature(
+						[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+						ts.factory.createStringLiteral(' $__typename'),
 						undefined,
-						ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
-						undefined,
+						ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
 					),
 				]),
-				undefined,
 			),
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TResolvers'),
-				ts.createTypeLiteralNode([]),
-				ts.createTypeLiteralNode([]),
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TResolvers'),
+				ts.factory.createTypeLiteralNode([]),
+				ts.factory.createTypeLiteralNode([]),
 			),
 		],
-		ts.createIntersectionTypeNode([
-			ts.createMappedTypeNode(
-				ts.createToken(ts.SyntaxKind.ReadonlyKeyword),
-				ts.createTypeParameterDeclaration(
-					ts.createIdentifier('P'),
-					ts.createTypeReferenceNode(ts.createIdentifier('Exclude'), [
-						ts.createTypeOperatorNode(ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined)),
-						ts.createLiteralTypeNode(ts.createStringLiteral(' $__typename')),
+		ts.factory.createIntersectionTypeNode([
+			ts.factory.createMappedTypeNode(
+				ts.factory.createToken(ts.SyntaxKind.ReadonlyKeyword),
+				ts.factory.createTypeParameterDeclaration(
+					ts.factory.createIdentifier('P'),
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Exclude'), [
+						ts.factory.createTypeOperatorNode(
+							ts.SyntaxKind.KeyOfKeyword,
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+						),
+						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(' $__typename')),
 					]),
-					undefined,
 				),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('ResponseTypeLookup'), [
-					ts.createIndexedAccessTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-						ts.createTypeReferenceNode(ts.createIdentifier('P'), undefined),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeLookup'), [
+					ts.factory.createIndexedAccessTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('P')),
 					),
 				]),
 			),
-			ts.createTypeLiteralNode([
-				ts.createPropertySignature(
-					[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-					ts.createIdentifier('__typename'),
+			ts.factory.createTypeLiteralNode([
+				ts.factory.createPropertySignature(
+					[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+					ts.factory.createIdentifier('__typename'),
 					undefined,
-					ts.createTypeReferenceNode(ts.createIdentifier('NonNullable'), [
-						ts.createIndexedAccessTypeNode(
-							ts.createTypeReferenceNode(ts.createIdentifier('T'), undefined),
-							ts.createLiteralTypeNode(ts.createStringLiteral(' $__typename')),
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('NonNullable'), [
+						ts.factory.createIndexedAccessTypeNode(
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
+							ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(' $__typename')),
 						),
 					]),
-					undefined,
 				),
 			]),
-			ts.createMappedTypeNode(
-				ts.createToken(ts.SyntaxKind.ReadonlyKeyword),
-				ts.createTypeParameterDeclaration(
-					ts.createIdentifier('P'),
-					ts.createTypeOperatorNode(ts.createTypeReferenceNode(ts.createIdentifier('TResolvers'), undefined)),
-					undefined,
+			ts.factory.createMappedTypeNode(
+				ts.factory.createToken(ts.SyntaxKind.ReadonlyKeyword),
+				ts.factory.createTypeParameterDeclaration(
+					ts.factory.createIdentifier('P'),
+					ts.factory.createTypeOperatorNode(
+						ts.SyntaxKind.KeyOfKeyword,
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResolvers')),
+					),
 				),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('ResponseTypeLookup'), [
-					ts.createTypeReferenceNode(ts.createIdentifier('ResolverReturnType'), [
-						ts.createIndexedAccessTypeNode(
-							ts.createTypeReferenceNode(ts.createIdentifier('TResolvers'), undefined),
-							ts.createTypeReferenceNode(ts.createIdentifier('P'), undefined),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeLookup'), [
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverReturnType'), [
+						ts.factory.createIndexedAccessTypeNode(
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TResolvers')),
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('P')),
 						),
 					]),
 				]),
@@ -820,44 +804,40 @@ export const relayTypes = ['Connection', 'Edge', 'Node', 'PageInfo'] as readonly
  * }
  */
 export const generateRelayPageInfoInterface = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('PageInfo'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('PageInfo'),
 		undefined,
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('endCursor'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('endCursor'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
 				]),
-				undefined,
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('hasNextPage'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('hasNextPage'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword),
-				undefined,
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword),
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('hasPreviousPage'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('hasPreviousPage'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword),
-				undefined,
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword),
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('startCursor'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('startCursor'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
 				]),
-				undefined,
 			),
 		],
 	);
@@ -871,22 +851,21 @@ export const generateRelayPageInfoInterface = () =>
  * }
  */
 export const generateRelayNodeInterface = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('Node'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('Node'),
 		undefined,
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('id'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('id'),
 				undefined,
-				ts.createIndexedAccessTypeNode(
-					ts.createTypeReferenceNode(ts.createIdentifier('Scalars'), undefined),
-					ts.createLiteralTypeNode(ts.createStringLiteral('ID')),
+				ts.factory.createIndexedAccessTypeNode(
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Scalars')),
+					ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('ID')),
 				),
-				undefined,
 			),
 		],
 	);
@@ -901,34 +880,31 @@ export const generateRelayNodeInterface = () =>
  * }
  */
 export const generateRelayEdgeInterface = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('Edge'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('Edge'),
 		[
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TNode'),
-				ts.createTypeReferenceNode(ts.createIdentifier('Node'), undefined),
-				undefined,
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TNode'),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Node')),
 			),
 		],
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('cursor'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('cursor'),
 				undefined,
-				ts.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
-				undefined,
+				ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('node'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('node'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createTypeReferenceNode(ts.createIdentifier('TNode'), undefined),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TNode')),
 				]),
-				undefined,
 			),
 		],
 	);
@@ -944,15 +920,15 @@ export const generateRelayEdgeInterface = () =>
  *     ;
  */
 export const generateRelayConnectionDirectionUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('ConnectionDirection'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('ConnectionDirection'),
 		undefined,
-		ts.createUnionTypeNode([
-			ts.createLiteralTypeNode(ts.createStringLiteral('backward')),
-			ts.createLiteralTypeNode(ts.createStringLiteral('forward')),
-			ts.createLiteralTypeNode(ts.createStringLiteral('both')),
+		ts.factory.createUnionTypeNode([
+			ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('backward')),
+			ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('forward')),
+			ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('both')),
 		]),
 	);
 
@@ -966,36 +942,34 @@ export const generateRelayConnectionDirectionUtilityType = () =>
  * }
  */
 export const generateRelayForwardConnectionArgsType = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('ForwardConnectionArgs'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('ForwardConnectionArgs'),
 		undefined,
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('after'),
-				ts.createToken(ts.SyntaxKind.QuestionToken),
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createIndexedAccessTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('Scalars'), undefined),
-						ts.createLiteralTypeNode(ts.createStringLiteral('String')),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('after'),
+				ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createIndexedAccessTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Scalars')),
+						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('String')),
 					),
 				]),
-				undefined,
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('first'),
-				ts.createToken(ts.SyntaxKind.QuestionToken),
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createIndexedAccessTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('Scalars'), undefined),
-						ts.createLiteralTypeNode(ts.createStringLiteral('Int')),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('first'),
+				ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createIndexedAccessTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Scalars')),
+						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('Int')),
 					),
 				]),
-				undefined,
 			),
 		],
 	);
@@ -1010,36 +984,34 @@ export const generateRelayForwardConnectionArgsType = () =>
  * }
  */
 export const generateRelayBackwardConnectionArgsType = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('BackwardConnectionArgs'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('BackwardConnectionArgs'),
 		undefined,
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('before'),
-				ts.createToken(ts.SyntaxKind.QuestionToken),
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createIndexedAccessTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('Scalars'), undefined),
-						ts.createLiteralTypeNode(ts.createStringLiteral('String')),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('before'),
+				ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createIndexedAccessTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Scalars')),
+						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('String')),
 					),
 				]),
-				undefined,
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('last'),
-				ts.createToken(ts.SyntaxKind.QuestionToken),
-				ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [
-					ts.createIndexedAccessTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('Scalars'), undefined),
-						ts.createLiteralTypeNode(ts.createStringLiteral('Int')),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('last'),
+				ts.factory.createToken(ts.SyntaxKind.QuestionToken),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [
+					ts.factory.createIndexedAccessTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Scalars')),
+						ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('Int')),
 					),
 				]),
-				undefined,
 			),
 		],
 	);
@@ -1055,36 +1027,33 @@ export const generateRelayBackwardConnectionArgsType = () =>
  * }
  */
 export const generateRelayConnectionArgsMapInterface = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('ConnectionArgsMap'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('ConnectionArgsMap'),
 		undefined,
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('backward'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('backward'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('BackwardConnectionArgs'), undefined),
-				undefined,
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('BackwardConnectionArgs')),
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('both'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('both'),
 				undefined,
-				ts.createIntersectionTypeNode([
-					ts.createTypeReferenceNode(ts.createIdentifier('BackwardConnectionArgs'), undefined),
-					ts.createTypeReferenceNode(ts.createIdentifier('ForwardConnectionArgs'), undefined),
+				ts.factory.createIntersectionTypeNode([
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('BackwardConnectionArgs')),
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ForwardConnectionArgs')),
 				]),
-				undefined,
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('forward'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('forward'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('ForwardConnectionArgs'), undefined),
-				undefined,
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ForwardConnectionArgs')),
 			),
 		],
 	);
@@ -1099,30 +1068,30 @@ export const generateRelayConnectionArgsMapInterface = () =>
  *         : TArgs & ConnectionArgsMap[TDirection];
  */
 export const generateRelayConnectionArgsUtilityType = () =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('ConnectionArgs'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('ConnectionArgs'),
 		[
-			ts.createTypeParameterDeclaration(ts.createIdentifier('TArgs'), undefined, undefined),
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TDirection'),
-				ts.createTypeReferenceNode(ts.createIdentifier('ConnectionDirection'), undefined),
-				ts.createLiteralTypeNode(ts.createStringLiteral('forward')),
+			ts.factory.createTypeParameterDeclaration(ts.factory.createIdentifier('TArgs')),
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TDirection'),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ConnectionDirection')),
+				ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral('forward')),
 			),
 		],
-		ts.createConditionalTypeNode(
-			ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-			ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
-			ts.createIndexedAccessTypeNode(
-				ts.createTypeReferenceNode(ts.createIdentifier('ConnectionArgsMap'), undefined),
-				ts.createTypeReferenceNode(ts.createIdentifier('TDirection'), undefined),
+		ts.factory.createConditionalTypeNode(
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
+			ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword),
+			ts.factory.createIndexedAccessTypeNode(
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ConnectionArgsMap')),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TDirection')),
 			),
-			ts.createIntersectionTypeNode([
-				ts.createTypeReferenceNode(ts.createIdentifier('TArgs'), undefined),
-				ts.createIndexedAccessTypeNode(
-					ts.createTypeReferenceNode(ts.createIdentifier('ConnectionArgsMap'), undefined),
-					ts.createTypeReferenceNode(ts.createIdentifier('TDirection'), undefined),
+			ts.factory.createIntersectionTypeNode([
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TArgs')),
+				ts.factory.createIndexedAccessTypeNode(
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ConnectionArgsMap')),
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TDirection')),
 				),
 			]),
 		),
@@ -1138,39 +1107,36 @@ export const generateRelayConnectionArgsUtilityType = () =>
  * }
  */
 export const generateRelayConnectionInterface = () =>
-	ts.createInterfaceDeclaration(
+	ts.factory.createInterfaceDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier('Connection'),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier('Connection'),
 		[
-			ts.createTypeParameterDeclaration(
-				ts.createIdentifier('TNode'),
-				ts.createTypeReferenceNode(ts.createIdentifier('Node'), undefined),
-				undefined,
+			ts.factory.createTypeParameterDeclaration(
+				ts.factory.createIdentifier('TNode'),
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Node')),
 			),
 		],
 		undefined,
 		[
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('edges'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('edges'),
 				undefined,
-				ts.createTypeOperatorNode(
+				ts.factory.createTypeOperatorNode(
 					ts.SyntaxKind.ReadonlyKeyword,
-					ts.createArrayTypeNode(
-						ts.createTypeReferenceNode(ts.createIdentifier('Edge'), [
-							ts.createTypeReferenceNode(ts.createIdentifier('TNode'), undefined),
+					ts.factory.createArrayTypeNode(
+						ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Edge'), [
+							ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('TNode')),
 						]),
 					),
 				),
-				undefined,
 			),
-			ts.createPropertySignature(
-				[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-				ts.createIdentifier('pageInfo'),
+			ts.factory.createPropertySignature(
+				[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+				ts.factory.createIdentifier('pageInfo'),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('PageInfo'), undefined),
-				undefined,
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('PageInfo')),
 			),
 		],
 	);
@@ -1184,7 +1150,7 @@ export const generateRelayConnectionInterface = () =>
  * }
  */
 const createMaybeType = (node: ts.TypeNode, isOptional: boolean) =>
-	isOptional ? ts.createTypeReferenceNode(ts.createIdentifier('Maybe'), [node]) : node;
+	isOptional ? ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Maybe'), [node]) : node;
 
 /**
  * Create a scalar type node.
@@ -1197,9 +1163,9 @@ const createMaybeType = (node: ts.TypeNode, isOptional: boolean) =>
  * }
  */
 const createScalarType = (typeName: keyof typeof scalars) =>
-	ts.createIndexedAccessTypeNode(
-		ts.createTypeReferenceNode(ts.createIdentifier('Scalars'), undefined),
-		ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
+	ts.factory.createIndexedAccessTypeNode(
+		ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Scalars')),
+		ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(typeName)),
 	);
 
 /**
@@ -1211,11 +1177,11 @@ const createScalarType = (typeName: keyof typeof scalars) =>
  * }
  */
 const createNamedType = (typeName: string, typeArgs?: readonly string[]) =>
-	ts.createTypeReferenceNode(
-		ts.createIdentifier(typeName),
+	ts.factory.createTypeReferenceNode(
+		ts.factory.createIdentifier(typeName),
 		typeArgs == null || typeArgs.length === 0
 			? undefined
-			: typeArgs.map((typeArg) => ts.createTypeReferenceNode(ts.createIdentifier(typeArg), undefined)),
+			: typeArgs.map((typeArg) => ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(typeArg))),
 	);
 
 /**
@@ -1236,7 +1202,7 @@ const isScalarType = (typeName: string): typeName is keyof typeof scalars =>
  * readonly T[]
  */
 const createListType = (node: ts.TypeNode) =>
-	ts.createTypeOperatorNode(ts.SyntaxKind.ReadonlyKeyword, ts.createArrayTypeNode(node));
+	ts.factory.createTypeOperatorNode(ts.SyntaxKind.ReadonlyKeyword, ts.factory.createArrayTypeNode(node));
 
 export type FieldType = ListFieldType | NamedFieldType;
 type ListFieldType = { listOf: FieldType; nullable: boolean };
@@ -1333,7 +1299,7 @@ const resolveRelayInterfaceTypeArgs = (interfaceName: string, typeName: string):
  * ```
  * ```typescript
  * // TS definition output.
- * export interface Viewer implements Node {
+ * export interface Viewer extends Node {
  *     readonly " $__typename": "Viewer";
  *     readonly id: Scalars['ID'];
  *     readonly name: Maybe<Scalars['String']>;
@@ -1346,23 +1312,23 @@ export const generateObjectType = (context: GenerateSchemaContext, typeName: str
 
 	return addNodeCommentBlock(
 		description,
-		ts.createInterfaceDeclaration(
+		ts.factory.createInterfaceDeclaration(
 			undefined,
-			[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-			ts.createIdentifier(typeName),
+			[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+			ts.factory.createIdentifier(typeName),
 			undefined,
 			interfaces.size === 0
 				? undefined
 				: [
-						ts.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [
+						ts.factory.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [
 							...pipe(
 								interfaces.keys(),
 								map((iface) =>
-									ts.createExpressionWithTypeArguments(
+									ts.factory.createExpressionWithTypeArguments(
+										ts.factory.createIdentifier(iface),
 										resolveRelayInterfaceTypeArgs(iface, typeName)?.map((typeArg) =>
-											ts.createTypeReferenceNode(ts.createIdentifier(typeArg), undefined),
+											ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(typeArg)),
 										),
-										ts.createIdentifier(iface),
 									),
 								),
 							),
@@ -1372,12 +1338,11 @@ export const generateObjectType = (context: GenerateSchemaContext, typeName: str
 				...(context.typeInfo.isInterfaceType(typeName)
 					? []
 					: [
-							ts.createPropertySignature(
-								[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-								ts.createStringLiteral(' $__typename'),
+							ts.factory.createPropertySignature(
+								[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+								ts.factory.createStringLiteral(' $__typename'),
 								undefined,
-								ts.createLiteralTypeNode(ts.createStringLiteral(typeName)),
-								undefined,
+								ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(typeName)),
 							),
 					  ]),
 				...pipe(
@@ -1386,12 +1351,11 @@ export const generateObjectType = (context: GenerateSchemaContext, typeName: str
 					map((field) =>
 						addNodeCommentBlock(
 							field.description?.value,
-							ts.createPropertySignature(
-								[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-								ts.createIdentifier(field.name.value),
+							ts.factory.createPropertySignature(
+								[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+								ts.factory.createIdentifier(field.name.value),
 								undefined,
 								createTypeFromNode(field.type),
-								undefined,
 							),
 						),
 					),
@@ -1413,52 +1377,48 @@ export const generateObjectTypeFieldResolvers = (
 		context.typeInfo.getFieldDefinitions(typeName),
 		filter(isResolver),
 		map((field) => [
-			ts.createTypeAliasDeclaration(
+			ts.factory.createTypeAliasDeclaration(
 				undefined,
-				[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-				ts.createIdentifier(capitalize(typeName, field.name.value, 'Args')),
+				[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.factory.createIdentifier(capitalize(typeName, field.name.value, 'Args')),
 				undefined,
 				field.arguments == null || field.arguments.length === 0
-					? ts.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword)
-					: ts.createTypeLiteralNode(
+					? ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword)
+					: ts.factory.createTypeLiteralNode(
 							field.arguments.map(
 								(arg) =>
-									ts.createPropertySignature(
-										[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-										ts.createIdentifier(arg.name.value),
+									ts.factory.createPropertySignature(
+										[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+										ts.factory.createIdentifier(arg.name.value),
 										undefined,
 										createTypeFromNode(arg.type),
-										undefined,
 									),
-								undefined,
 							),
 					  ),
 			),
-			ts.createTypeAliasDeclaration(
+			ts.factory.createTypeAliasDeclaration(
 				undefined,
-				[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-				ts.createIdentifier(capitalize(typeName, field.name.value, 'Resolver')),
+				[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.factory.createIdentifier(capitalize(typeName, field.name.value, 'Resolver')),
 				undefined,
-				ts.createTypeReferenceNode(ts.createIdentifier('ResolverFn'), [
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResolverFn'), [
 					createTypeFromNode(field.type),
-					ts.createTypeReferenceNode(
-						ts.createIdentifier(context.typeInfo.isOperationType(typeName) ? 'Root' : typeName),
-						undefined,
+					ts.factory.createTypeReferenceNode(
+						ts.factory.createIdentifier(context.typeInfo.isOperationType(typeName) ? 'Root' : typeName),
 					),
-					ts.createTypeReferenceNode(ts.createIdentifier('Context'), undefined),
-					ts.createTypeReferenceNode(
-						ts.createIdentifier(capitalize(typeName, field.name.value, 'Args')),
-						undefined,
+					ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('Context')),
+					ts.factory.createTypeReferenceNode(
+						ts.factory.createIdentifier(capitalize(typeName, field.name.value, 'Args')),
 					),
 				]),
 			),
 		]),
 		flatMap(),
 		just(
-			ts.createInterfaceDeclaration(
+			ts.factory.createInterfaceDeclaration(
 				undefined,
-				[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-				ts.createIdentifier(capitalize(typeName, 'Resolvers')),
+				[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+				ts.factory.createIdentifier(capitalize(typeName, 'Resolvers')),
 				undefined,
 				undefined,
 				[
@@ -1466,15 +1426,13 @@ export const generateObjectTypeFieldResolvers = (
 						context.typeInfo.getFieldDefinitions(typeName),
 						filter(isResolver),
 						map((field) =>
-							ts.createPropertySignature(
-								[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-								ts.createIdentifier(field.name.value),
+							ts.factory.createPropertySignature(
+								[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+								ts.factory.createIdentifier(field.name.value),
 								undefined,
-								ts.createTypeReferenceNode(
-									ts.createIdentifier(capitalize(typeName, field.name.value, 'Resolver')),
-									undefined,
+								ts.factory.createTypeReferenceNode(
+									ts.factory.createIdentifier(capitalize(typeName, field.name.value, 'Resolver')),
 								),
-								undefined,
 							),
 						),
 					),
@@ -1486,10 +1444,10 @@ export const generateObjectTypeFieldResolvers = (
 export const generateInputObjectType = (context: GenerateSchemaContext, typeName: string) =>
 	addNodeCommentBlock(
 		context.typeInfo.getInputObjectTypeDescription(typeName),
-		ts.createInterfaceDeclaration(
+		ts.factory.createInterfaceDeclaration(
 			undefined,
-			[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-			ts.createIdentifier(typeName),
+			[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+			ts.factory.createIdentifier(typeName),
 			undefined,
 			undefined,
 			[
@@ -1498,12 +1456,11 @@ export const generateInputObjectType = (context: GenerateSchemaContext, typeName
 					map((field) =>
 						addNodeCommentBlock(
 							field.description?.value,
-							ts.createPropertySignature(
-								[ts.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-								ts.createIdentifier(field.name.value),
+							ts.factory.createPropertySignature(
+								[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+								ts.factory.createIdentifier(field.name.value),
 								undefined,
 								createTypeFromNode(field.type),
-								undefined,
 							),
 						),
 					),
@@ -1541,14 +1498,14 @@ export const generateObjectTypeResolvers = (context: GenerateSchemaContext) =>
 	);
 
 const generateObjectResponseType = (typeName: string) =>
-	ts.createTypeAliasDeclaration(
+	ts.factory.createTypeAliasDeclaration(
 		undefined,
-		[ts.createModifier(ts.SyntaxKind.ExportKeyword)],
-		ts.createIdentifier(capitalize(typeName, 'Response')),
+		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+		ts.factory.createIdentifier(capitalize(typeName, 'Response')),
 		undefined,
-		ts.createTypeReferenceNode(ts.createIdentifier('ResponseType'), [
-			ts.createTypeReferenceNode(ts.createIdentifier(typeName), undefined),
-			ts.createTypeReferenceNode(ts.createIdentifier(capitalize(typeName, 'Resolvers')), undefined),
+		ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseType'), [
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(typeName)),
+			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(capitalize(typeName, 'Resolvers'))),
 		]),
 	);
 

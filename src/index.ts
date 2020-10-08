@@ -1,3 +1,3 @@
-export * as ExportDirectory from './Plugins/ExportDirectory';
-export * as GraphQLResolver from './Plugins/GraphQLResolver';
-export * as GraphQLSchema from './Plugins/GraphQLSchema';
+export { plugin as ExportDirectory } from './Plugins/ExportDirectory';
+export { plugin as GraphQLResolver } from './Plugins/GraphQLResolver';
+export { plugin as GraphQLSchema } from './Plugins/GraphQLSchema';

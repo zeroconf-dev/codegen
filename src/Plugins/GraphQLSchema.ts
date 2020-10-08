@@ -5,7 +5,7 @@ import { join } from 'path';
 
 interface PluginConfig {}
 
-const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> = {
+export const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> = {
 	config: async (config) => config as PluginConfig,
 	generate: async (context) => {
 		context.logger.info('Plugins/GraphQLSchema');
@@ -24,5 +24,3 @@ const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> 
 		};
 	},
 };
-
-export = plugin;
