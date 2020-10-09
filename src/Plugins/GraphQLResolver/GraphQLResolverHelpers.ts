@@ -4,7 +4,7 @@ import { assertNever, capitalize, filter, flatMap, just, map, ModulePath, not, p
 import { FieldDefinitionNode, Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode } from 'graphql';
 import * as ts from 'typescript';
 
-export const generateGraphQLResolveInfoImportStatement = () =>
+export const generateGraphQLResolveInfoImportStatement = (): ts.ImportDeclaration =>
 	ts.factory.createImportDeclaration(
 		undefined,
 		undefined,
@@ -28,7 +28,7 @@ export const generateGraphQLResolveInfoImportStatement = () =>
  * @example
  * export type Root = undefined;
  */
-export const generateRootType = (modulePath?: Maybe<ModulePath>) =>
+export const generateRootType = (modulePath?: Maybe<ModulePath>): ts.TypeAliasDeclaration | ts.ImportDeclaration =>
 	modulePath == null
 		? ts.factory.createTypeAliasDeclaration(
 				undefined,
@@ -49,7 +49,7 @@ export const generateRootType = (modulePath?: Maybe<ModulePath>) =>
  * @example
  * export type Context = undefined;
  */
-export const generateContextType = (modulePath?: Maybe<ModulePath>) =>
+export const generateContextType = (modulePath?: Maybe<ModulePath>): ts.TypeAliasDeclaration | ts.ImportDeclaration =>
 	modulePath == null
 		? ts.factory.createTypeAliasDeclaration(
 				undefined,
@@ -82,7 +82,7 @@ const scalars = {
  *     String: string;
  * }
  */
-export const generateScalarsMapInterface = () =>
+export const generateScalarsMapInterface = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -105,7 +105,7 @@ export const generateScalarsMapInterface = () =>
  * @example
  * type ResolverResult<T> = T | Promise<T>;
  */
-export const generateResolverResultUtilityType = () =>
+export const generateResolverResultUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -127,7 +127,7 @@ type Maybe<T> = T | null;
  * @example
  * type Maybe<T> = T | null;
  */
-export const generateMaybeUtilityType = () =>
+export const generateMaybeUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -159,7 +159,7 @@ export const generateMaybeUtilityType = () =>
  * @example
  * withoutArgs: (context, parent, info) => res
  */
-export const generateResolversFnUtilityType = () =>
+export const generateResolversFnUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -449,7 +449,7 @@ export const generateResolversFnUtilityType = () =>
  * @example
  * type ProfileResult = UnwrapPromise<Profile>
  */
-export const generateUnwrapPromiseUtilityType = () =>
+export const generateUnwrapPromiseUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -476,7 +476,7 @@ export const generateUnwrapPromiseUtilityType = () =>
  *         ? UnwrapPromise<R>
  *         : UnwrapPromise<T>
  */
-export const generateResolverReturnTypeUtilityType = () =>
+export const generateResolverReturnTypeUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -513,7 +513,7 @@ export const generateResolverReturnTypeUtilityType = () =>
  * Generate response type map, from GraphQL object resolver output type,
  * to the actual GraphQL response type.
  */
-export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) =>
+export const generateResponseTypeMapInterface = (objectTypes: Iterable<string>): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		undefined, // [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -523,7 +523,7 @@ export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) 
 		[
 			...pipe(
 				objectTypes,
-				filter((typeName) => !relayTypes.includes(typeName)),
+				filter<string>((typeName) => !relayTypes.includes(typeName)),
 				map((typeName) =>
 					ts.factory.createPropertySignature(
 						[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
@@ -543,7 +543,7 @@ export const generateResponseTypeMapInterface = (objectTypes: Iterator<string>) 
  * @example
  * type PreserveMaybe<T, U> = U extends null ? Maybe<T> : T;
  */
-export const generatePreserveMaybeUtilityType = () =>
+export const generatePreserveMaybeUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -579,7 +579,7 @@ export const generatePreserveMaybeUtilityType = () =>
  * }
  * type ViewerResponse = ExtractResponseTypeLookup<'Viewer'>;
  */
-export const generateExtractResponseTypeLookupUtilityType = () =>
+export const generateExtractResponseTypeLookupUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -594,7 +594,7 @@ export const generateExtractResponseTypeLookupUtilityType = () =>
 			ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('T')),
 			ts.factory.createTypeOperatorNode(
 				ts.SyntaxKind.KeyOfKeyword,
-				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeMap'))
+				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeMap')),
 			),
 			ts.factory.createIndexedAccessTypeNode(
 				ts.factory.createTypeReferenceNode(ts.factory.createIdentifier('ResponseTypeMap')),
@@ -618,7 +618,7 @@ export const generateExtractResponseTypeLookupUtilityType = () =>
  * @example
  * type ViewerResponse = ExtractResponseType<Viewer>
  */
-export const generateExtractResponseTypeUtilityType = () =>
+export const generateExtractResponseTypeUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -667,7 +667,7 @@ export const generateExtractResponseTypeUtilityType = () =>
  * // Maybe<ViewerResponse>[]
  * type MaybeViewerResponseArray = ResponseTypeLookup<Maybe<Viewer>[]>;
  */
-export const generateResponseTypeLookupUtilityType = () =>
+export const generateResponseTypeLookupUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -711,7 +711,7 @@ export const generateResponseTypeLookupUtilityType = () =>
  * @example
  * type ViewerResponse = ResponseType<Viewer, ViewerResolvers>
  */
-export const generateResponseTypeUtilityType = () =>
+export const generateResponseTypeUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		undefined,
@@ -803,7 +803,7 @@ export const relayTypes = ['Connection', 'Edge', 'Node', 'PageInfo'] as readonly
  *     readonly startCursor: Maybe<string>;
  * }
  */
-export const generateRelayPageInfoInterface = () =>
+export const generateRelayPageInfoInterface = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -850,7 +850,7 @@ export const generateRelayPageInfoInterface = () =>
  *     readonly id: Scalars['ID'];
  * }
  */
-export const generateRelayNodeInterface = () =>
+export const generateRelayNodeInterface = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -879,7 +879,7 @@ export const generateRelayNodeInterface = () =>
  *     readonly node: Maybe<TNode>;
  * }
  */
-export const generateRelayEdgeInterface = () =>
+export const generateRelayEdgeInterface = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -919,7 +919,7 @@ export const generateRelayEdgeInterface = () =>
  *     | 'both'
  *     ;
  */
-export const generateRelayConnectionDirectionUtilityType = () =>
+export const generateRelayConnectionDirectionUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -941,7 +941,7 @@ export const generateRelayConnectionDirectionUtilityType = () =>
  *     readonly first?: Maybe<Scalars['Int']>;
  * }
  */
-export const generateRelayForwardConnectionArgsType = () =>
+export const generateRelayForwardConnectionArgsType = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -983,7 +983,7 @@ export const generateRelayForwardConnectionArgsType = () =>
  *     readonly last?: Maybe<Scalars['Int']>;
  * }
  */
-export const generateRelayBackwardConnectionArgsType = () =>
+export const generateRelayBackwardConnectionArgsType = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1026,7 +1026,7 @@ export const generateRelayBackwardConnectionArgsType = () =>
  *     readonly forward: ForwardConnectionArgs;
  * }
  */
-export const generateRelayConnectionArgsMapInterface = () =>
+export const generateRelayConnectionArgsMapInterface = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1067,7 +1067,7 @@ export const generateRelayConnectionArgsMapInterface = () =>
  *         ? ConnectionArgsMap[TDirection]
  *         : TArgs & ConnectionArgsMap[TDirection];
  */
-export const generateRelayConnectionArgsUtilityType = () =>
+export const generateRelayConnectionArgsUtilityType = (): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1106,7 +1106,7 @@ export const generateRelayConnectionArgsUtilityType = () =>
  *     readonly pageInfo: PageInfo;
  * }
  */
-export const generateRelayConnectionInterface = () =>
+export const generateRelayConnectionInterface = (): ts.InterfaceDeclaration =>
 	ts.factory.createInterfaceDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1210,47 +1210,6 @@ type NamedFieldType = { listOf?: undefined; fieldType: string; nullable: boolean
 
 export type Field = FieldType & { fieldName: string };
 
-/**
- * Resolve Optional/List/Scalar/NamedType, and create corresponding typescript resolution.
- *
- * @example
- * createTypeFromField({ fieldName: 'id', fieldType: 'ID', nullable: false })
- * interface Viewer {
- *     // Output
- *     id: Scalars['ID']
- * }
- *
- * @example
- * createTypeFromField({ fieldName: 'address', fieldType: 'String', nullable: true })
- * interface Profile {
- *     // Output
- *     address: Maybe<Scalars['String']>;
- * }
- *
- * @example
- * createTypeFromField({ fieldName: 'profile', fieldType: 'Profile', nullable: true })
- * interface Viewer {
- *     // Output
- *     profile: Maybe<Profile>;
- * }
- *
- * @example
- * createTypeFromField({ fieldName: 'friends', listOf: { fieldType: 'Profile', nullable: true }, nullable: true })
- * interface Profile {
- *     // Output
- *     friends: Maybe<readonly Maybe<Profile>[]>;
- * }
- */
-const createTypeFromField = (field: Field | FieldType): ts.TypeNode =>
-	field.listOf == null
-		? createMaybeType(
-				isScalarType(field.fieldType)
-					? createScalarType(field.fieldType)
-					: createNamedType(field.fieldType, field.typeArgs),
-				field.nullable,
-		  )
-		: createMaybeType(createListType(createTypeFromField(field.listOf)), field.nullable);
-
 type CreateTypeFromNode = (node: NamedTypeNode | ListTypeNode | NonNullTypeNode) => ts.TypeNode;
 type PrivateCreateTypeFromNode = (
 	node: NamedTypeNode | ListTypeNode | NonNullTypeNode,
@@ -1271,6 +1230,7 @@ const createTypeFromNode: CreateTypeFromNode = (
 		case Kind.NON_NULL_TYPE:
 			return (createTypeFromNode as PrivateCreateTypeFromNode)(node.type, false);
 		default:
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			return assertNever(node, `Unknown node kind: ${node == null ? 'NULL' : node!.kind ?? 'NULL'}`);
 	}
 };
@@ -1306,7 +1266,7 @@ const resolveRelayInterfaceTypeArgs = (interfaceName: string, typeName: string):
  * }
  * ````
  */
-export const generateObjectType = (context: GenerateSchemaContext, typeName: string) => {
+export const generateObjectType = (context: GenerateSchemaContext, typeName: string): ts.InterfaceDeclaration => {
 	const interfaces = context.typeInfo.getInterfacesForObjectType(typeName);
 	const description = context.typeInfo.getTypeDescription(typeName);
 
@@ -1385,14 +1345,13 @@ export const generateObjectTypeFieldResolvers = (
 				field.arguments == null || field.arguments.length === 0
 					? ts.factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword)
 					: ts.factory.createTypeLiteralNode(
-							field.arguments.map(
-								(arg) =>
-									ts.factory.createPropertySignature(
-										[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
-										ts.factory.createIdentifier(arg.name.value),
-										undefined,
-										createTypeFromNode(arg.type),
-									),
+							field.arguments.map((arg) =>
+								ts.factory.createPropertySignature(
+									[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
+									ts.factory.createIdentifier(arg.name.value),
+									undefined,
+									createTypeFromNode(arg.type),
+								),
 							),
 					  ),
 			),
@@ -1441,7 +1400,7 @@ export const generateObjectTypeFieldResolvers = (
 		),
 	);
 
-export const generateInputObjectType = (context: GenerateSchemaContext, typeName: string) =>
+export const generateInputObjectType = (context: GenerateSchemaContext, typeName: string): ts.InterfaceDeclaration =>
 	addNodeCommentBlock(
 		context.typeInfo.getInputObjectTypeDescription(typeName),
 		ts.factory.createInterfaceDeclaration(
@@ -1469,27 +1428,27 @@ export const generateInputObjectType = (context: GenerateSchemaContext, typeName
 		),
 	);
 
-export const generateInputObjectTypes = (context: GenerateSchemaContext) =>
+export const generateInputObjectTypes = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration> =>
 	pipe(
 		context.typeInfo.inputObjectDefinitions.keys(),
 		map((typeName) => generateInputObjectType(context, typeName)),
 	);
 
-export const generateInterfaceOutputTypes = (context: GenerateSchemaContext) =>
+export const generateInterfaceOutputTypes = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration> =>
 	pipe(
 		context.typeInfo.interfaceDefinitions.keys(),
 		filter((typeName) => !relayTypes.includes(typeName)),
 		map((typeName) => generateObjectType(context, typeName)),
 	);
 
-export const generateObjectOutputTypes = (context: GenerateSchemaContext) =>
+export const generateObjectOutputTypes = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration> =>
 	pipe(
 		context.typeInfo.objectDefinitions.keys(),
 		filter((typeName) => !relayTypes.includes(typeName)),
 		map((typeName) => generateObjectType(context, typeName)),
 	);
 
-export const generateObjectTypeResolvers = (context: GenerateSchemaContext) =>
+export const generateObjectTypeResolvers = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration | ts.TypeAliasDeclaration> =>
 	pipe(
 		context.typeInfo.objectDefinitions.keys(),
 		filter((typeName) => !relayTypes.includes(typeName)),
@@ -1497,7 +1456,7 @@ export const generateObjectTypeResolvers = (context: GenerateSchemaContext) =>
 		flatMap(),
 	);
 
-const generateObjectResponseType = (typeName: string) =>
+const generateObjectResponseType = (typeName: string): ts.TypeAliasDeclaration =>
 	ts.factory.createTypeAliasDeclaration(
 		undefined,
 		[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1509,7 +1468,7 @@ const generateObjectResponseType = (typeName: string) =>
 		]),
 	);
 
-export const generateObjectResponseTypes = (context: GenerateSchemaContext) =>
+export const generateObjectResponseTypes = (context: GenerateSchemaContext): Iterable<ts.TypeAliasDeclaration> =>
 	pipe(
 		context.typeInfo.objectDefinitions.keys(),
 		filter((typeName) => !relayTypes.includes(typeName)),

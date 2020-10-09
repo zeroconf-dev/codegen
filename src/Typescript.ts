@@ -5,7 +5,7 @@ import { promisify } from 'util';
 
 const writeFile = promisify(writeFileCallback);
 
-export function createSourceFile() {
+export function createSourceFile(): ts.SourceFile {
 	return ts.factory.createSourceFile([], ts.factory.createToken(ts.SyntaxKind.EndOfFileToken), ts.NodeFlags.None);
 }
 
@@ -14,7 +14,7 @@ export function createImportDeclarationFromModulePath({
 	exportName,
 	importName,
 	importPath,
-}: ModulePath) {
+}: ModulePath): ts.ImportDeclaration {
 	return ts.factory.createImportDeclaration(
 		undefined,
 		undefined,
@@ -52,7 +52,7 @@ export function printSourceFile(sourceFile: ts.SourceFile, outputStream?: NodeJS
 	}
 }
 
-export function addHeaderComment(sourceFile: ts.SourceFile, headerComment: string) {
+export function addHeaderComment(sourceFile: ts.SourceFile, headerComment: string): ts.SourceFile {
 	if (sourceFile.statements.length === 0) {
 		const compiledHeader = headerComment
 			.split('\n')

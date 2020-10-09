@@ -11,6 +11,7 @@ import {
 	EnumTypeExtensionNode,
 	EnumValueDefinitionNode,
 	FieldDefinitionNode,
+	GraphQLError,
 	GraphQLSchema,
 	InputObjectTypeDefinitionNode,
 	InputObjectTypeExtensionNode,
@@ -753,11 +754,11 @@ class GenerateSchemaContext {
 		this.typeInfo = new SchemaTypeInfo<SchemaASTNode>(this.document, this.schema, logger);
 	}
 
-	public validateSchema() {
+	public validateSchema(): readonly GraphQLError[] {
 		return validateSchema(this.schema);
 	}
 
-	public visitSchema(visitor: SchemaASTVisitor) {
+	public visitSchema(visitor: SchemaASTVisitor): void {
 		this.document.definitions.forEach((def) => {
 			visit(
 				def,
@@ -782,7 +783,7 @@ export async function loadSourceFile(sourcePath: PathLike): Promise<DocumentNode
 	return parse(new Source((await readFile(sourcePath)).toString(), sourcePath.toString()));
 }
 
-export function createContext(documents: DocumentNode[] | DocumentNode, logger: AnsiLogger<any>) {
+export function createContext(documents: DocumentNode[] | DocumentNode, logger: AnsiLogger<any>): GenerateSchemaContext {
 	const context = new GenerateSchemaContext(documents, logger);
 
 	const errors = validateSchema(context.schema);

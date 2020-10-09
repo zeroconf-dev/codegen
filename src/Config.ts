@@ -37,7 +37,7 @@ export interface Config {
 			config: OutputConfigReadonly;
 			loaders?: string[];
 			plugins: {
-				[pluginImportPath: string]: {};
+				[pluginImportPath: string]: { [key: string]: string | undefined };
 			};
 		};
 	};

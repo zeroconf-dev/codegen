@@ -3,6 +3,7 @@ import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import { DocumentNode, printSchema } from 'graphql';
 import { join } from 'path';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface PluginConfig {}
 
 export const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> = {

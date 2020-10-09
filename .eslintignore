@@ -1,0 +1,5 @@
+.vscode
+generated
+node_modules
+package
+scripts

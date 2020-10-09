@@ -7,7 +7,7 @@ import * as fg from 'fast-glob';
 import { createWriteStream } from 'fs';
 import { join } from 'path';
 
-export function run({ generates, config: globalConfig }: Config) {
+export function run({ generates, config: globalConfig }: Config): Promise<void> {
 	return Object.entries(generates).reduce(
 		async (previousOutput, [outputPath, { plugins, config: outputConfig, loaders }]) => {
 			await previousOutput;
@@ -53,6 +53,7 @@ export async function createGenerateContext(
 		| { outputPath: string; outputStream?: undefined }
 		| { outputPath?: undefined; outputStream: NodeJS.WritableStream }
 	),
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	globalConfig: {},
 ): Promise<CodegenContext> {
 	const outputConfigMerged = {
