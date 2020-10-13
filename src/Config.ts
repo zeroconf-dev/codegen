@@ -47,27 +47,3 @@ export async function loadConfig(): Promise<Maybe<Config>> {
 	const result = await explorer.search();
 	return result == null ? null : result.config;
 }
-
-export function isString(str: unknown): str is string {
-	return typeof str === 'string';
-}
-
-export function isMaybeString(str: unknown): str is Maybe<string> {
-	return str == null || isString(str);
-}
-
-export function isBoolean(str: unknown): str is boolean {
-	return typeof str === 'boolean';
-}
-
-export function isMaybeBoolean(str: unknown): str is Maybe<boolean> {
-	return str == null || isBoolean(str);
-}
-
-export function isNumber(str: unknown): str is number {
-	return typeof str === 'number';
-}
-
-export function isMaybeNumber(str: unknown): str is Maybe<number> {
-	return str == null || isNumber(str);
-}

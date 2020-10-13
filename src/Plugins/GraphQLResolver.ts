@@ -1,4 +1,3 @@
-import { isMaybeString } from '@zeroconf/codegen/Config';
 import { GraphQLSchemaCodegenContextExtension } from '@zeroconf/codegen/GraphQL';
 import {
 	generateContextType,
@@ -38,7 +37,7 @@ import {
 	printSourceFile,
 } from '@zeroconf/codegen/Typescript';
 import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
-import { getModulePath } from '@zeroconf/codegen/Util';
+import { getModulePath, isMaybeString } from '@zeroconf/codegen/Util';
 import * as ts from 'typescript';
 
 interface GenerateOptions {

@@ -27,7 +27,9 @@ export function createImportDeclarationFromModulePath({
 				: undefined,
 			defaultImport
 				? undefined
-				: ts.factory.createNamedImports([ts.factory.createImportSpecifier(undefined, ts.factory.createIdentifier(importName))]),
+				: ts.factory.createNamedImports([
+						ts.factory.createImportSpecifier(undefined, ts.factory.createIdentifier(importName)),
+				  ]),
 		),
 		ts.factory.createStringLiteral(importPath),
 	);

@@ -2,7 +2,12 @@ import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
 import { filterNonNull, getModulePath, ModulePath } from '@zeroconf/codegen/Util';
 import { basename, dirname, extname, join } from 'path';
 import * as ts from 'typescript';
-import { addHeaderComment, createSourceFile, defaultHeaderComment, printSourceFile } from '../Typescript';
+import {
+	addHeaderComment,
+	createSourceFile,
+	defaultHeaderComment,
+	printSourceFile,
+} from '@zeroconf/codegen/Typescript';
 
 enum ExportType {
 	ReExport = 'ReExport',

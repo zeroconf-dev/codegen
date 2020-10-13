@@ -1,7 +1,14 @@
 import { GenerateSchemaContext } from '@zeroconf/codegen/GraphQL';
 import { addNodeCommentBlock, createImportDeclarationFromModulePath } from '@zeroconf/codegen/Typescript';
-import { assertNever, capitalize, filter, flatMap, just, map, ModulePath, not, pipe } from '@zeroconf/codegen/Util';
-import { FieldDefinitionNode, Kind, ListTypeNode, NamedTypeNode, NonNullTypeNode } from 'graphql';
+import { assertNever, capitalize, filter, flatten, just, map, ModulePath, not, pipe } from '@zeroconf/codegen/Util';
+import {
+	FieldDefinitionNode,
+	InputValueDefinitionNode,
+	Kind,
+	ListTypeNode,
+	NamedTypeNode,
+	NonNullTypeNode,
+} from 'graphql';
 import * as ts from 'typescript';
 
 export const generateGraphQLResolveInfoImportStatement = (): ts.ImportDeclaration =>
@@ -523,8 +530,8 @@ export const generateResponseTypeMapInterface = (objectTypes: Iterable<string>):
 		[
 			...pipe(
 				objectTypes,
-				filter<string>((typeName) => !relayTypes.includes(typeName)),
-				map((typeName) =>
+				filter((typeName: string) => !relayTypes.includes(typeName)),
+				map((typeName: string) =>
 					ts.factory.createPropertySignature(
 						[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
 						ts.factory.createIdentifier(typeName),
@@ -1283,7 +1290,7 @@ export const generateObjectType = (context: GenerateSchemaContext, typeName: str
 						ts.factory.createHeritageClause(ts.SyntaxKind.ExtendsKeyword, [
 							...pipe(
 								interfaces.keys(),
-								map((iface) =>
+								map((iface: string) =>
 									ts.factory.createExpressionWithTypeArguments(
 										ts.factory.createIdentifier(iface),
 										resolveRelayInterfaceTypeArgs(iface, typeName)?.map((typeArg) =>
@@ -1308,7 +1315,7 @@ export const generateObjectType = (context: GenerateSchemaContext, typeName: str
 				...pipe(
 					context.typeInfo.getFieldDefinitions(typeName),
 					filter(not(isResolver)),
-					map((field) =>
+					map((field: FieldDefinitionNode) =>
 						addNodeCommentBlock(
 							field.description?.value,
 							ts.factory.createPropertySignature(
@@ -1336,7 +1343,7 @@ export const generateObjectTypeFieldResolvers = (
 	pipe(
 		context.typeInfo.getFieldDefinitions(typeName),
 		filter(isResolver),
-		map((field) => [
+		map((field: FieldDefinitionNode) => [
 			ts.factory.createTypeAliasDeclaration(
 				undefined,
 				[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1372,8 +1379,8 @@ export const generateObjectTypeFieldResolvers = (
 				]),
 			),
 		]),
-		flatMap(),
-		just(
+		flatten,
+		just<ts.TypeAliasDeclaration, ts.InterfaceDeclaration>(
 			ts.factory.createInterfaceDeclaration(
 				undefined,
 				[ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -1384,7 +1391,7 @@ export const generateObjectTypeFieldResolvers = (
 					...pipe(
 						context.typeInfo.getFieldDefinitions(typeName),
 						filter(isResolver),
-						map((field) =>
+						map((field: FieldDefinitionNode) =>
 							ts.factory.createPropertySignature(
 								[ts.factory.createModifier(ts.SyntaxKind.ReadonlyKeyword)],
 								ts.factory.createIdentifier(field.name.value),
@@ -1412,7 +1419,7 @@ export const generateInputObjectType = (context: GenerateSchemaContext, typeName
 			[
 				...pipe(
 					context.typeInfo.getInputFieldDefinitions(typeName),
-					map((field) =>
+					map((field: InputValueDefinitionNode) =>
 						addNodeCommentBlock(
 							field.description?.value,
 							ts.factory.createPropertySignature(
@@ -1431,29 +1438,31 @@ export const generateInputObjectType = (context: GenerateSchemaContext, typeName
 export const generateInputObjectTypes = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration> =>
 	pipe(
 		context.typeInfo.inputObjectDefinitions.keys(),
-		map((typeName) => generateInputObjectType(context, typeName)),
+		map((typeName: string) => generateInputObjectType(context, typeName)),
 	);
 
 export const generateInterfaceOutputTypes = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration> =>
 	pipe(
 		context.typeInfo.interfaceDefinitions.keys(),
-		filter((typeName) => !relayTypes.includes(typeName)),
-		map((typeName) => generateObjectType(context, typeName)),
+		filter((typeName: string) => !relayTypes.includes(typeName)),
+		map((typeName: string) => generateObjectType(context, typeName)),
 	);
 
 export const generateObjectOutputTypes = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration> =>
 	pipe(
 		context.typeInfo.objectDefinitions.keys(),
-		filter((typeName) => !relayTypes.includes(typeName)),
-		map((typeName) => generateObjectType(context, typeName)),
+		filter((typeName: string) => !relayTypes.includes(typeName)),
+		map((typeName: string) => generateObjectType(context, typeName)),
 	);
 
-export const generateObjectTypeResolvers = (context: GenerateSchemaContext): Iterable<ts.InterfaceDeclaration | ts.TypeAliasDeclaration> =>
+export const generateObjectTypeResolvers = (
+	context: GenerateSchemaContext,
+): Iterable<ts.InterfaceDeclaration | ts.TypeAliasDeclaration> =>
 	pipe(
 		context.typeInfo.objectDefinitions.keys(),
-		filter((typeName) => !relayTypes.includes(typeName)),
-		map((typeName) => generateObjectTypeFieldResolvers(context, typeName)),
-		flatMap(),
+		filter((typeName: string) => !relayTypes.includes(typeName)),
+		map((typeName: string) => generateObjectTypeFieldResolvers(context, typeName)),
+		flatten,
 	);
 
 const generateObjectResponseType = (typeName: string): ts.TypeAliasDeclaration =>
@@ -1471,6 +1480,6 @@ const generateObjectResponseType = (typeName: string): ts.TypeAliasDeclaration =
 export const generateObjectResponseTypes = (context: GenerateSchemaContext): Iterable<ts.TypeAliasDeclaration> =>
 	pipe(
 		context.typeInfo.objectDefinitions.keys(),
-		filter((typeName) => !relayTypes.includes(typeName)),
-		map((typeName) => generateObjectResponseType(typeName)),
+		filter((typeName: string) => !relayTypes.includes(typeName)),
+		map((typeName: string) => generateObjectResponseType(typeName)),
 	);

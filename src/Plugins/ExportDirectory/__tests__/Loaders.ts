@@ -3,7 +3,7 @@ import { createGenerateContext } from '@zeroconf/codegen/Runner';
 import { Level } from 'ansi-logger';
 import { join } from 'path';
 import { PassThrough } from 'stream';
-const { generate, ExportType } = ExportDirectory
+const { generate, ExportType } = ExportDirectory;
 
 function createOutputStream(): [PassThrough, Buffer[]] {
 	const chunks: Buffer[] = [];

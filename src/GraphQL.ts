@@ -352,8 +352,11 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 			Array.from(
 				pipe(
 					this.getObjectTypeDefinitions(typeName),
-					map((d) => d.kind === Kind.OBJECT_TYPE_DEFINITION && d.description?.value),
-					filter((c) => typeof c === 'string'),
+					map(
+						(d: ObjectTypeDefinitionNodes) =>
+							d.kind === Kind.OBJECT_TYPE_DEFINITION && d.description?.value,
+					),
+					filter((c: string | false | undefined) => typeof c === 'string'),
 				),
 			)
 				.join('\n')
@@ -378,8 +381,11 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 			Array.from(
 				pipe(
 					this.getInputObjectTypeDefinitions(typeName),
-					map((d) => d.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION && d.description?.value),
-					filter((c) => typeof c === 'string'),
+					map(
+						(d: InputObjectTypeDefinitionNodes) =>
+							d.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION && d.description?.value,
+					),
+					filter((c: string | false | undefined) => typeof c === 'string'),
 				),
 			)
 				.join('\n')
@@ -420,8 +426,11 @@ class SchemaTypeInfo<TSchemaASTNode extends SchemaASTNode> {
 			Array.from(
 				pipe(
 					this.getInterfaceTypeDefinitions(typeName),
-					map((d) => d.kind === Kind.INTERFACE_TYPE_DEFINITION && d.description?.value),
-					filter((c) => typeof c === 'string'),
+					map(
+						(d: InterfaceTypeDefinitionNodes) =>
+							d.kind === Kind.INTERFACE_TYPE_DEFINITION && d.description?.value,
+					),
+					filter((c: string | false | undefined) => typeof c === 'string'),
 				),
 			)
 				.join('\n')
@@ -783,7 +792,10 @@ export async function loadSourceFile(sourcePath: PathLike): Promise<DocumentNode
 	return parse(new Source((await readFile(sourcePath)).toString(), sourcePath.toString()));
 }
 
-export function createContext(documents: DocumentNode[] | DocumentNode, logger: AnsiLogger<any>): GenerateSchemaContext {
+export function createContext(
+	documents: DocumentNode[] | DocumentNode,
+	logger: AnsiLogger<any>,
+): GenerateSchemaContext {
 	const context = new GenerateSchemaContext(documents, logger);
 
 	const errors = validateSchema(context.schema);
