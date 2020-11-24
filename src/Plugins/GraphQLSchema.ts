@@ -1,27 +1,53 @@
-import { createContext, GraphQLSchemaCodegenContextExtension, loadSourceFile } from '@zeroconf/codegen/GraphQL';
-import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
+import { OutputConfig } from '@zeroconf/codegen/Config';
+import { createContext, loadSourceFile } from '@zeroconf/codegen/GraphQL';
+import { PluginContext, PluginGenerator, PluginValidateConfigContext } from '@zeroconf/codegen/Runner';
 import { DocumentNode, printSchema } from 'graphql';
 import { join } from 'path';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface PluginConfig {}
+export interface GenerateOptions {
+	outputConfig: OutputConfig;
+}
 
-export const plugin: CodegenPlugin<PluginConfig, GraphQLSchemaCodegenContextExtension> = {
-	config: async (config) => config as PluginConfig,
-	generate: async (context) => {
-		context.logger.info('Plugins/GraphQLSchema');
-		const { schema } = context.graphql.schemaContext;
-		context.outputStream.write(printSchema(schema));
-	},
-	load: async (context): Promise<void> => {
-		const documents: DocumentNode[] = [];
-		for await (const filePath of context.inputStream) {
-			documents.push(await loadSourceFile(join(context.outputConfig.directory, filePath.toString())));
+export async function* plugin(ctx: PluginContext): PluginGenerator {
+	ctx.yieldUntil(ctx.phases.validateConfig);
+	yield;
+
+	const config = await ctx.validate.runConfigValidation<GenerateOptions>(validateConfig);
+
+	ctx.yieldUntil(ctx.phases.loadInput);
+	yield;
+
+	const documents = await ctx.load.loadInputFiles(async (inputStream) => {
+		const docs: Promise<DocumentNode>[] = [];
+		for await (const filePath of inputStream) {
+			docs.push(loadSourceFile(join(config.outputConfig.directory, filePath.toString())));
 		}
+		return Promise.all(docs);
+	});
 
-		const schemaContext = createContext(documents, context.logger);
-		context.graphql = {
-			schemaContext,
-		};
-	},
-};
+	ctx.yieldUntil(ctx.phases.generate);
+	yield;
+
+	const schemaContext = createContext(documents, null as any);
+
+	ctx.yieldUntil(ctx.phases.emit);
+	yield;
+
+	await ctx.emit.writeOutput(async ({ outputFileStream }) => {
+		outputFileStream.write(printSchema(schemaContext.schema));
+	});
+
+	ctx.yieldUntil(ctx.phases.cleanup);
+	yield;
+}
+
+async function validateConfig(
+	_ctx: PluginValidateConfigContext,
+	rawConfig: unknown,
+	outputConfig: OutputConfig,
+): Promise<GenerateOptions> {
+	return {
+		...(rawConfig as any),
+		outputConfig,
+	} as GenerateOptions;
+}

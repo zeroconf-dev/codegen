@@ -232,3 +232,9 @@ export function isNumber(str: unknown): str is number {
 export function isMaybeNumber(str: unknown): str is Maybe<number> {
 	return str == null || isNumber(str);
 }
+
+export async function* nodeStreamToStream(str: NodeJS.ReadableStream): Stream<string | Buffer> {
+	for await (const value of str) {
+		yield value;
+	}
+}

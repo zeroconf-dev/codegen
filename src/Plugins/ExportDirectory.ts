@@ -1,6 +1,7 @@
-import { CodegenPlugin } from '@zeroconf/codegen/typings/Plugin';
-import { filterNonNull, getModulePath, ModulePath } from '@zeroconf/codegen/Util';
+import { PluginContext, PluginGenerator, PluginValidateConfigContext } from '@zeroconf/codegen/Runner';
 import { basename, dirname, extname, join } from 'path';
+import { OutputConfig } from '@zeroconf/codegen/Config';
+import { filterNonNull, getModulePath, isWildcardPath, ModulePath } from '@zeroconf/codegen/Util';
 import * as ts from 'typescript';
 import {
 	addHeaderComment,
@@ -9,17 +10,17 @@ import {
 	printSourceFile,
 } from '@zeroconf/codegen/Typescript';
 
-enum ExportType {
+export enum ExportType {
 	ReExport = 'ReExport',
 	SingletonClass = 'SingletonClass',
 }
 
-interface GenerateOptionsBase {
-	exportTemplate?: string;
+export interface GenerateOptionsBase {
+	exportTemplate?: Maybe<string>;
 	exportType: ExportType;
-	headerComment?: string;
+	headerComment?: Maybe<string>;
 	importPrefix: string;
-	importTemplate?: string;
+	importTemplate?: Maybe<string>;
 }
 
 interface GenerateReExport {
@@ -32,14 +33,14 @@ interface ConstructorParameter {
 }
 
 type GenerateSingletonClass = {
-	additionalImports?: string[];
-	className?: string;
+	additionalImports?: Maybe<string[]>;
+	className?: Maybe<string>;
 	constructorParameters?: ConstructorParameter[];
 	defaultExport?: boolean;
 	exportType: ExportType.SingletonClass;
-} & ({ className: string; defaultExport?: boolean } | { className?: string; defaultExport: true });
+} & ({ className: string; defaultExport?: boolean } | { className?: Maybe<string>; defaultExport: true });
 
-type GenerateOptions = GenerateOptionsBase & (GenerateReExport | GenerateSingletonClass);
+export type GenerateOptions = GenerateOptionsBase & (GenerateReExport | GenerateSingletonClass);
 
 type GenerateSingletonClassOptions = GenerateOptionsBase & GenerateSingletonClass;
 
@@ -59,61 +60,49 @@ interface ImportExportVariable {
 
 const defaultImportTemplate = '${fileName}';
 
-export const plugin: CodegenPlugin<GenerateOptions, { export: { filePaths: string[] } }> & {
-	ExportType: typeof ExportType;
-} = {
-	ExportType: ExportType,
-	config: async (config: any): Promise<GenerateOptions> => {
-		return config as GenerateOptions;
-	},
-	generate: async (context, options): Promise<void> => {
-		context.logger.info('Plugins/ExportDirectory');
-		const { exportTemplate, importPrefix, importTemplate = defaultImportTemplate } = options;
-		const outputFile = createSourceFile();
+export async function* plugin(ctx: PluginContext): PluginGenerator {
+	ctx.yieldUntil(ctx.phases.validateConfig);
 
-		const importExportMap: ImportExportMap = {};
+	const config = await ctx.validate.runConfigValidation<GenerateOptions>(validateConfig);
 
-		for await (const filePath of context.inputStream) {
-			const fileExtension = extname(filePath.toString());
-			const fileName = basename(filePath.toString(), fileExtension);
-			const directoryName = dirname(filePath.toString());
+	ctx.yieldUntil(ctx.phases.loadInput);
+	yield;
 
-			const variables = {
-				directoryName,
-				fileExtension,
-				fileName,
-			};
+	const importExportMap = await ctx.load.loadInputFiles((inputStream) => compileImportExportMap(inputStream, config));
+	ctx.yieldUntil(ctx.phases.generate);
+	yield;
 
-			const importName = compileImportName(importTemplate, variables);
-			const exportName = compileExportName(exportTemplate, variables) ?? importName;
+	const outputFile = compileOutputFile(createSourceFile(), config, importExportMap);
 
-			importExportMap[compileImportPath(join(directoryName, fileName), importPrefix)] = {
-				defaultImport: importName === 'default',
-				exportName,
-				importName: importName === 'default' ? exportName : importName,
-			};
-		}
+	ctx.yieldUntil(ctx.phases.emit);
+	yield;
 
-		await compileOutputFile(outputFile, options, importExportMap, context.outputStream);
-	},
-};
+	await ctx.emit.writeOutput(
+		async ({ outputFileStream }): Promise<void> => {
+			printSourceFile(outputFile, outputFileStream);
+		},
+	);
 
-function compileExportName(exportTemplate: string | undefined, variables: ImportExportVariable): string | undefined {
-	return exportTemplate == null
-		? exportTemplate
-		: Object.entries(variables).reduce((result, [key, value]) => {
-				return result.replace(`\${${key}}`, value);
-		  }, exportTemplate);
+	ctx.yieldUntil(ctx.phases.cleanup);
+	yield;
 }
 
-function compileImportName(importTemplate: string, variables: ImportExportVariable): string {
-	return Object.entries(variables).reduce((result, [key, value]) => {
-		return result.replace(`\${${key}}`, value);
-	}, importTemplate);
-}
+function compileOutputFile(
+	outputFile: ts.SourceFile,
+	config: GenerateOptions,
+	importExportMap: ImportExportMap,
+): ts.SourceFile {
+	const { headerComment } = config;
 
-function compileImportPath(filePath: string, importPrefix: string): string {
-	return join(importPrefix, filePath);
+	const compiledSourceFile = ts.factory.updateSourceFile(
+		outputFile,
+		config.exportType === ExportType.SingletonClass
+			? compileSingletonClass(config.className, config, importExportMap)
+			: compileExportDeclarations(importExportMap),
+		false,
+	);
+
+	return addHeaderComment(compiledSourceFile, headerComment ?? defaultHeaderComment);
 }
 
 function compileExportDeclarations(importExportMap: ImportExportMap) {
@@ -136,7 +125,7 @@ function compileExportDeclarations(importExportMap: ImportExportMap) {
 }
 
 function compileSingletonClass(
-	className: string | undefined,
+	className: Maybe<string> | undefined,
 	options: GenerateSingletonClassOptions,
 	importExportMap: ImportExportMap,
 ) {
@@ -159,29 +148,10 @@ function compileSingletonClass(
 	];
 }
 
-async function compileOutputFile(
-	outputFile: ts.SourceFile,
-	options: GenerateOptions,
-	importExportMap: ImportExportMap,
-	outputStream: NodeJS.WritableStream,
-): Promise<void> {
-	const { headerComment = defaultHeaderComment } = options;
-
-	const compiledSourceFile = ts.factory.updateSourceFile(
-		outputFile,
-		options.exportType === ExportType.SingletonClass
-			? compileSingletonClass(options.className, options, importExportMap)
-			: compileExportDeclarations(importExportMap),
-		false,
-	);
-
-	await printSourceFile(addHeaderComment(compiledSourceFile, headerComment), outputStream);
-}
-
 /**
  * export [default] class ClassName {}
  */
-function createSingletonClass(className: string | undefined, defaultExport?: boolean) {
+function createSingletonClass(className: Maybe<string> | undefined, defaultExport?: boolean) {
 	return ts.factory.createClassDeclaration(
 		undefined,
 		filterNonNull([
@@ -465,4 +435,158 @@ function addPublicSingletonGetterProperties(
 				),
 		],
 	);
+}
+
+async function compileImportExportMap(inputStream: Stream<string>, config: GenerateOptions): Promise<ImportExportMap> {
+	const { exportTemplate, importPrefix, importTemplate } = config;
+
+	const importExportMap: ImportExportMap = {};
+
+	for await (const filePath of inputStream) {
+		const fileExtension = extname(filePath.toString());
+		const fileName = basename(filePath.toString(), fileExtension);
+		const directoryName = dirname(filePath.toString());
+
+		const variables = {
+			directoryName,
+			fileExtension,
+			fileName,
+		};
+
+		const importName = compileImportName(importTemplate ?? defaultImportTemplate, variables);
+		const exportName = compileExportName(exportTemplate, variables) ?? importName;
+
+		importExportMap[compileImportPath(join(directoryName, fileName), importPrefix)] = {
+			defaultImport: importName === 'default',
+			exportName,
+			importName: importName === 'default' ? exportName : importName,
+		};
+	}
+	return importExportMap;
+}
+
+function compileExportName(exportTemplate: Maybe<string> | undefined, variables: ImportExportVariable): string | null {
+	return exportTemplate == null
+		? null
+		: Object.entries(variables).reduce((result, [key, value]) => {
+				return result.replace(`\${${key}}`, value);
+		  }, exportTemplate);
+}
+
+function compileImportName(importTemplate: string, variables: ImportExportVariable): string {
+	return Object.entries(variables).reduce((result, [key, value]) => {
+		return result.replace(`\${${key}}`, value);
+	}, importTemplate);
+}
+
+function compileImportPath(filePath: string, importPrefix: string): string {
+	return join(importPrefix, filePath);
+}
+
+async function validateConfig(
+	ctx: PluginValidateConfigContext,
+	rawConfig: unknown,
+	outputConfig: OutputConfig,
+): Promise<GenerateOptions> {
+	if (isWildcardPath(outputConfig.outputPattern)) {
+		throw new TypeError(`outputPattern must point to a single file, got: ${outputConfig.outputPattern}`);
+	}
+
+	ctx.assertObject(rawConfig, 'Must provide a config to the @zeroconf/codegen#ExportDirectory plugin');
+	ctx.assertString(rawConfig.exportType, 'Missing exportType option in config');
+	ctx.assertEnum<ExportType>(rawConfig.exportType, (exportType) => {
+		switch (exportType) {
+			case ExportType.ReExport:
+			case ExportType.SingletonClass:
+				return null;
+			default:
+				return `The exportType config option must be either ReExport or SingletonClass, got: ${exportType}`;
+		}
+	});
+	ctx.assertMaybeString(
+		rawConfig.exportTemplate,
+		`The exportTemplate config option must be either a string or omitted, got: ${rawConfig.exportTemplate}`,
+	);
+	ctx.assertMaybeString(
+		rawConfig.headerComment,
+		`The headerComment config option must be either a string or omitted, got: ${rawConfig.headerComment}`,
+	);
+	ctx.assertString(
+		rawConfig.importPrefix,
+		`Must provide a valid string as importPrefix config option, got: ${rawConfig.importPrefix}`,
+	);
+	ctx.assertMaybeString(
+		rawConfig.importTemplate,
+		`The importTemplate config option must be either a string or omitted, got: ${rawConfig.importTemplate}`,
+	);
+
+	const baseOptions: GenerateOptionsBase = {
+		exportTemplate: rawConfig.exportTemplate,
+		exportType: rawConfig.exportType,
+		headerComment: rawConfig.headerComment,
+		importPrefix: rawConfig.importPrefix,
+		importTemplate: rawConfig.importTemplate,
+	};
+
+	if (baseOptions.exportType === ExportType.ReExport) {
+		return {
+			...baseOptions,
+			exportType: ExportType.ReExport,
+		};
+	} else {
+		let exportOptions:
+			| { className: string; defaultExport?: boolean | undefined }
+			| { className?: undefined; defaultExport: true };
+
+		ctx.assertMaybeBoolean(
+			rawConfig.defaultExport,
+			`The defaultExport config option must be either a boolean or omitted, got: ${rawConfig.defaultExport}`,
+		);
+
+		if (rawConfig.defaultExport) {
+			ctx.assertMaybeString(
+				rawConfig.className,
+				`The className config option must be omitted when defaultExport is enabled, got: ${rawConfig.className}`,
+			);
+			exportOptions = {
+				defaultExport: rawConfig.defaultExport,
+				className: rawConfig.className ?? undefined,
+			};
+		} else {
+			ctx.assertString(
+				rawConfig.className,
+				`When defaultExport is omitted or set to false, a className must be provided and be a valid string, got: ${rawConfig.className}`,
+			);
+			exportOptions = {
+				className: rawConfig.className,
+				defaultExport: rawConfig.defaultExport ?? undefined,
+			};
+		}
+
+		ctx.assertMaybeStringArray(
+			rawConfig.additionalImports,
+			`The additionalImports config option must be either omitted or a list of strings, got: ${rawConfig.additionalImports}`,
+		);
+
+		ctx.assertMaybeStringArray(
+			rawConfig.constructorParameters,
+			`The constructorParameters config options must be either omitted or a list of string, got: ${rawConfig.constructorParameters}`,
+		);
+
+		const constructorParameters =
+			rawConfig.constructorParameters == null
+				? undefined
+				: rawConfig.constructorParameters.map((param) => {
+						const [paramName, paramType] = param.split('#');
+						return { paramName, paramType };
+				  });
+
+		return {
+			...baseOptions,
+			...exportOptions,
+			additionalImports: rawConfig.additionalImports,
+			constructorParameters: constructorParameters,
+			exportType: ExportType.SingletonClass,
+		};
+	}
 }

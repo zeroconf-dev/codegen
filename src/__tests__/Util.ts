@@ -22,20 +22,18 @@ describe('Path', () => {
 	});
 });
 
-`
-input path                      input pattern               output pattern              output path
-------------------------------------------------------------------------------------------------------------
-/input/file/path.graphql        /input/file/path.graphql    /output/file/path.ts        /output/file/path.ts
-/input/file/path.graphql        /input/file/*.graphql       /output/file/path.ts        /output/file/path.ts
-/input/file/path.graphql        /input/file/**/*.graphql    /output/file/path.ts        /output/file/path.ts
-/input/file/sub/path.graphql    /input/file/**/*.graphql    /output/file/sub/path.ts    /output/file/sub/path.ts
-/input/file/path.graphql        /input/file/path.graphql    /output/file/*.ts           /output/file/path.ts
-/input/file/path.graphql        /input/file/*.graphql       /output/file/*.ts           /output/file/path.ts
-/input/file/sub/path.graphql    /input/file/**/*.graphql    /output/file/*.ts           /output/file/sub/path.ts
-
-*                               *                           /output/**                  throw
-*                               *                           /output/*/                  throw
-`;
+//  input path                      input pattern               output pattern              output path
+//  ------------------------------------------------------------------------------------------------------------
+//  /input/file/path.graphql        /input/file/path.graphql    /output/file/path.ts        /output/file/path.ts
+//  /input/file/path.graphql        /input/file/*.graphql       /output/file/path.ts        /output/file/path.ts
+//  /input/file/path.graphql        /input/file/**/*.graphql    /output/file/path.ts        /output/file/path.ts
+//  /input/file/sub/path.graphql    /input/file/**/*.graphql    /output/file/sub/path.ts    /output/file/sub/path.ts
+//  /input/file/path.graphql        /input/file/path.graphql    /output/file/*.ts           /output/file/path.ts
+//  /input/file/path.graphql        /input/file/*.graphql       /output/file/*.ts           /output/file/path.ts
+//  /input/file/sub/path.graphql    /input/file/**/*.graphql    /output/file/*.ts           /output/file/sub/path.ts
+//
+//  *                               *                           /output/**                  throw
+//  *                               *                           /output/*/                  throw
 
 describe('compileOutputPath', () => {
 	test('input absolute path -> output absolute path', () => {

@@ -26,10 +26,13 @@ export interface OutputConfig {
 	 */
 	directory: string;
 	globPattern: string;
+	outputPattern: string;
 }
 
 export interface Config {
-	config: {
+	config?: {
+		directory?: string;
+		globPattern?: string;
 		debug?: boolean;
 	};
 	generates: {

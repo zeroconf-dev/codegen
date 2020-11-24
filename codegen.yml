@@ -5,10 +5,12 @@ generates:
       directory: src/Plugins/ExportDirectory/__tests__/fixtures/Loaders
       globPattern: '*.ts'
     plugins:
-      "@zeroconf/codegen#ExportDirectory":
+      "@zeroconf/codegen/Plugins/ExportDirectory#plugin":
         additionalImports:
         - "@zeroconf/codegen/Context#CodegenContext"
         - "redis#[RedisClient]"
+        constructorParameters:
+        - context#CodegenContext
         className: Loaders
         exportTemplate: ${fileName}
         exportType: SingletonClass
@@ -18,15 +20,11 @@ generates:
     config:
       directory: src/Plugins/GraphQLSchema/__tests__/fixtures/Schema
       globPattern: '**/*.{gql,graphql}'
-    loaders:
-    - "@zeroconf/codegen#GraphQLSchema"
     plugins:
       "@zeroconf/codegen#GraphQLSchema":
   generated/Schema.graphql.ts:
     config:
       directory: src/Plugins/GraphQLSchema/__tests__/fixtures/Schema
       globPattern: '**/*.{gql,graphql}'
-    loaders:
-    - "@zeroconf/codegen#GraphQLSchema"
     plugins:
       "@zeroconf/codegen#GraphQLResolver":

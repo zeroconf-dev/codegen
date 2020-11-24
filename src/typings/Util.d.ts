@@ -1,6 +1,8 @@
 type Maybe<T> = T | null;
 type MaybePromise<T> = T | Promise<T>;
 
+type Stream<T> = AsyncGenerator<T, void, void>;
+
 type PipeOperator<TInput = unknown, TResult = TInput> = (iterable: Iterable<TInput>) => Iterable<TResult>;
 
 type PipeResult<TInput, TPipeOperators extends readonly any[]> = TPipeOperators extends { length: 0 }
