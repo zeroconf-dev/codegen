@@ -1,12 +1,11 @@
 {
-	"name": "@zeroconf/codegen",
-	"version": "1.0.0",
-	"main": "index.js",
-	"repository": "https://github.com/zeroconf-dev/codegen",
 	"author": {
 		"email": "github@zeroconf.dev",
 		"name": "ZeroConf OSS",
 		"url": "https://github.com/zeroconf-dev"
+	},
+	"bin": {
+		"codegen": "./Cli.js"
 	},
 	"contributors": [
 		{
@@ -15,8 +14,6 @@
 			"url": "https://github.com/thetrompf"
 		}
 	],
-	"license": "BSD-3-Clause",
-	"private": true,
 	"devDependencies": {
 		"@types/jest": "^26.0.14",
 		"@types/node": "^14.11.5",
@@ -39,7 +36,19 @@
 		"graphql": "^15.3.0",
 		"tslib": "^2.0.2"
 	},
+	"license": "BSD-3-Clause",
+	"name": "@zeroconf/codegen",
+	"main": "index.js",
+	"repository": {
+		"directory": "package",
+		"type": "git",
+		"url": "https://github.com/zeroconf-dev/codegen"
+	},
+	"private": true,
 	"scripts": {
+		"build": "./scripts/build.sh",
+		"test": "jest",
 		"postinstall": "mkdir -p ./node_modules/@zeroconf && ln -sfn ../../src ./node_modules/@zeroconf/codegen"
-	}
+	},
+	"version": "1.0.0-alpha1"
 }
